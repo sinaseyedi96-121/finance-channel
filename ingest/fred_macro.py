@@ -55,6 +55,22 @@ def _fetch_csv(series_id: str) -> list[tuple[str, float]]:
     return out[-config.FRED_LOOKBACK_DAYS:]
 
 
+def latest(series_id: str) -> float | None:
+    """Latest observation of a FRED series (keyless CSV endpoint). None on failure.
+    Used by the bubble index for GDP and the high-yield credit spread."""
+    try:
+        resp = requests.get(config.FRED_CSV_URL, params={"id": series_id}, timeout=20)
+        resp.raise_for_status()
+        reader = csv.reader(io.StringIO(resp.text))
+        rows = list(reader)[1:]
+        for date, value in reversed([(r[0], r[1]) for r in rows if len(r) >= 2]):
+            if value not in (".", "", None):
+                return float(value)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[fred] latest({series_id}) failed: {exc}")
+    return None
+
+
 def fetch() -> list[dict]:
     api_key = os.environ.get("FRED_API_KEY")
     items: list[dict] = []

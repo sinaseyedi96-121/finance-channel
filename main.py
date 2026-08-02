@@ -535,14 +535,33 @@ def run_bubble_index(dry_run: bool, force: bool) -> None:
     today = _weekly_gate(current_state, config.BUBBLE_INDEX_WEEKDAY, "last_bubble_index", "bubble_index", force)
     if today is None:
         return
-    frames = prices.fetch_ohlcv(config.BUBBLE_INDEX_TICKERS)
+    conc_a, conc_b = config.BUBBLE_CONCENTRATION_PAIR
+    frames = prices.fetch_ohlcv(config.BUBBLE_INDEX_TICKERS + [conc_a, conc_b])
     tech_map = {t: technicals.summarize(t, frames[t]) for t in config.BUBBLE_INDEX_TICKERS if t in frames}
-    index = bubble_index_stage.compute_index(tech_map)
+
+    def _ret6(sym):
+        df = frames.get(sym)
+        n = config.BUBBLE_CONCENTRATION_LOOKBACK
+        if df is None or len(df) <= n:
+            return None
+        c = df["Close"].astype(float)
+        return (c.iloc[-1] / c.iloc[-n] - 1) * 100
+
+    gdp_b = fred_macro.latest(config.FRED_GDP_SERIES)          # US nominal GDP, $ billions
+    capex_gdp_pct = (config.BUBBLE_AI_CAPEX_ANNUAL_USD / (gdp_b * 1e9) * 100) if gdp_b else None
+    inputs = {
+        "valuations": fundamentals.fetch(config.BUBBLE_INDEX_TICKERS),
+        "tech_map": tech_map,
+        "concentration": {"spy_ret": _ret6(conc_a), "rsp_ret": _ret6(conc_b)},
+        "capex_gdp_pct": capex_gdp_pct,
+        "hy_spread_pct": fred_macro.latest(config.FRED_HY_SPREAD_SERIES),
+    }
+    index = bubble_index_stage.compute_index(inputs)
     if not index:
         print("[bubble_index] no data; skipping")
         return
     client = get_client()
-    text = compliance.format_message(bubble_index_stage.run_bubble_index(client, index, tech_map))
+    text = compliance.format_message(bubble_index_stage.run_bubble_index(client, index))
     gauge = bubble_index_stage.gauge_chart(index)
     if dry_run:
         print(f"\n----- DRY RUN BUBBLE INDEX {index['score']}/100 {index['label']} (chart: {gauge}) -----\n{text}\n-----\n")

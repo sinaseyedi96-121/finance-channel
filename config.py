@@ -314,6 +314,25 @@ BUBBLE_INDEX_WEEKDAY = 4               # Friday
 # Names the froth gauge is computed across (the AI leadership).
 BUBBLE_INDEX_TICKERS = ["NVDA", "MSFT", "GOOGL", "AMZN", "META", "AMD", "AVGO", "PLTR"]
 
+# Multi-pillar AI Bubble Index (methodology blends Fidelity's 5 signs, Exponential
+# View's boomorbubble.ai gauges, and CEPR/AI-Bubble-Monitor). Each pillar scores
+# 0-100 froth; the composite is their weighted average (weights renormalize over
+# whichever pillars have data). Edit weights to taste — they should sum to ~1.
+BUBBLE_PILLAR_WEIGHTS = {
+    "valuation": 0.28,        # avg forward P/E + PEG of the AI leaders (Fidelity/EV "valuation heat")
+    "concentration": 0.18,    # cap-weight vs equal-weight S&P (Mag7 dominance / breadth)
+    "exuberance": 0.20,       # price momentum: RSI, % above 200EMA, Bollinger pos, breadth (CEPR)
+    "capex_gdp": 0.22,        # AI capex / US GDP (Exponential View "economic strain")
+    "credit": 0.12,           # high-yield credit spread (tight = complacency/systemic froth)
+}
+BUBBLE_CONCENTRATION_PAIR = ("SPY", "RSP")   # cap-weight vs equal-weight S&P 500
+BUBBLE_CONCENTRATION_LOOKBACK = 126          # ~6 months of trading days
+# Hyperscaler + AI infra annual capex estimate (USD). Update as it grows — Goldman
+# projects ~$1T by ~2027; ~$500B is the 2026 run-rate. Drives the economic-strain pillar.
+BUBBLE_AI_CAPEX_ANNUAL_USD = 500e9
+FRED_GDP_SERIES = "GDP"                       # US nominal GDP, $ billions, quarterly
+FRED_HY_SPREAD_SERIES = "BAMLH0A0HYM2"        # ICE BofA US High Yield OAS, %
+
 # =====================================================================
 # HIDDEN VALUE  (weekly, Wednesday) — undervalued + overlooked essentials
 # =====================================================================
