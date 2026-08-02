@@ -1,0 +1,84 @@
+name: AI Stocks Update
+
+on:
+  schedule:
+    # 3x/day, US market days (Mon-Fri). Times are UTC, aligned to US Eastern
+    # DAYLIGHT time (EDT, UTC-4). During EST (Nov-Mar) the US clock is one hour
+    # later, so shift each cron +1h if you want to hold the ET slot exactly.
+    - cron: '30 12 * * 1-5'    # ~08:30 ET pre-open
+    - cron: '30 16 * * 1-5'    # ~12:30 ET midday
+    - cron: '15 20 * * 1-5'    # ~16:15 ET after-close
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Run the pipeline but do not publish
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write   # so "Commit updated state" can push post_history.json
+
+concurrency:
+  group: ai-stocks-publisher
+  cancel-in-progress: false
+
+jobs:
+  post-update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Test pipeline
+        run: python -m unittest discover -s tests -v
+
+      - name: Run pipeline
+        env:
+          DEEPSEEK_KEY: ${{ secrets.DEEPSEEK_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
+          FINNHUB_KEY: ${{ secrets.FINNHUB_KEY }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+          DRY_RUN_FLAG: ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
+        run: python main.py --mode auto ${DRY_RUN_FLAG}
+
+      - name: Commit updated state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add post_history.json posts_log.jsonl
+          if git diff --staged --quiet; then
+            echo "No state changes"
+            exit 0
+          fi
+          git commit -m "Update post history [skip ci]"
+
+          # Bunched schedule triggers run back-to-back under the same
+          # concurrency group; checkout pins to the trigger-time SHA, so a
+          # queued run can start from a stale checkout and get its push
+          # rejected. Rebase onto the tip and retry; our freshly-written
+          # state wins on a real conflict in these generated files.
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt), rebasing onto latest main..."
+            git fetch origin main
+            if ! git rebase origin/main; then
+              git checkout --ours -- post_history.json posts_log.jsonl
+              git add post_history.json posts_log.jsonl
+              git rebase --continue
+            fi
+            sleep $((RANDOM % 6 + 2))
+          done
+          echo "Failed to push after retries" >&2
+          exit 1

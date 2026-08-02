@@ -1,0 +1,104 @@
+"""
+Tiny JSON-file state store, committed back to the repo after each run — same
+persistence pattern as the crypto-market-channel / ai_news pipelines (GitHub
+Actions runners are ephemeral, so these files are the only memory between runs).
+
+State shape (post_history.json):
+{
+  "posted_ids": ["<source>:<id>", ...],   # dedup keys for published items
+  "seen_filings": {"NVDA": ["<accession>", ...]},
+  "last_discovery": "2026-08-02"
+}
+"""
+
+from __future__ import annotations
+
+import json
+import os
+
+import config
+
+
+# ---- generic load/save ------------------------------------------------
+
+def load_state() -> dict:
+    if not os.path.exists(config.STATE_FILE):
+        return {}
+    with open(config.STATE_FILE, "r") as f:
+        return json.load(f)
+
+
+def save_state(state: dict) -> None:
+    with open(config.STATE_FILE, "w") as f:
+        json.dump(state, f, indent=2, sort_keys=True)
+
+
+# ---- published-item dedup --------------------------------------------
+
+def dedup_key(item: dict) -> str:
+    """Stable per-item key used for dedup across runs."""
+    return f"{item.get('source', '?')}:{item.get('id', '')}"
+
+
+def already_posted(state: dict, item: dict) -> bool:
+    return dedup_key(item) in set(state.get("posted_ids", []))
+
+
+def mark_posted(state: dict, item: dict) -> None:
+    posted = state.setdefault("posted_ids", [])
+    key = dedup_key(item)
+    if key not in posted:
+        posted.append(key)
+    # Keep the list from growing unbounded; the tail is the recent history
+    # that actually matters for dedup.
+    if len(posted) > 5000:
+        del posted[:-5000]
+
+
+# ---- SEC filing tracking ---------------------------------------------
+
+def filing_seen(state: dict, ticker: str, accession: str) -> bool:
+    return accession in set(state.get("seen_filings", {}).get(ticker, []))
+
+
+def mark_filing_seen(state: dict, ticker: str, accession: str) -> None:
+    seen = state.setdefault("seen_filings", {}).setdefault(ticker, [])
+    if accession not in seen:
+        seen.append(accession)
+    if len(seen) > 100:
+        del seen[:-100]
+
+
+# ---- discovery cadence ------------------------------------------------
+
+def last_discovery_date(state: dict) -> str | None:
+    return state.get("last_discovery")
+
+
+def set_last_discovery_date(state: dict, date_iso: str) -> None:
+    state["last_discovery"] = date_iso
+
+
+# ---- published-post log ----------------------------------------------
+
+def append_post_log(entry: dict) -> None:
+    """Append one JSONL record. Best-effort: never break a run over logging."""
+    try:
+        with open(config.POSTS_LOG_FILE, "a") as f:
+            f.write(json.dumps(entry) + "\n")
+    except OSError as exc:
+        print(f"Could not append to posts log: {exc}")
+
+
+# ---- staging ----------------------------------------------------------
+
+def save_staging(items: list[dict]) -> None:
+    with open(config.STAGING_FILE, "w") as f:
+        json.dump(items, f, indent=2)
+
+
+def load_staging() -> list[dict]:
+    if not os.path.exists(config.STAGING_FILE):
+        return []
+    with open(config.STAGING_FILE, "r") as f:
+        return json.load(f)
