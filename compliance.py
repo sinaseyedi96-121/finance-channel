@@ -1,14 +1,17 @@
 """
-Stage 6 — compliance / format layer.
+Stage 6 — format layer (formerly "compliance").
 
-Two jobs:
-  1. LINT: reject any generated body that contains buy/sell/entry/stop/target
-     language (config.FORBIDDEN_PATTERNS). Descriptive-only framing keeps the
-     channel clear of MiFID II / CONSOB territory on repeated public trade recs.
-  2. FORMAT: assemble the final Telegram-ready post — header + body + mandatory
-     disclaimer footer + channel backlink — with the body HTML-escaped for
-     Telegram's HTML parse mode. The footer is appended in code, never left to
-     the model to remember.
+The channel is personal/informational and, by the owner's choice, does NOT
+append a legal disclaimer footer and does NOT run the descriptive-only linter.
+Both are kept here behind config toggles (DISCLAIMER_ENABLED / LINT_ENABLED) so
+they can be switched back on later (e.g. if the channel monetizes) without a
+code change.
+
+Two outputs:
+  * format_caption(body)   — photo caption (plain text + emojis), capped at the
+    Telegram caption limit. Used for the chart posts.
+  * format_post(header, body) — HTML text message. Used for the weekly discovery
+    post (no chart).
 """
 
 from __future__ import annotations
@@ -22,43 +25,61 @@ import config
 _COMPILED = [re.compile(p, re.IGNORECASE) for p in config.FORBIDDEN_PATTERNS]
 
 
-def lint(text: str) -> list[str]:
-    """Return the list of forbidden phrases found (empty == clean)."""
+def _scan(text: str) -> list[str]:
+    """Always scans, regardless of the toggle (used by tests + optional gate)."""
     hits: list[str] = []
     for pattern in _COMPILED:
-        for match in pattern.finditer(text or ""):
-            hits.append(match.group(0))
+        hits.extend(m.group(0) for m in pattern.finditer(text or ""))
     return hits
+
+
+def lint(text: str, enabled: bool | None = None) -> list[str]:
+    """Return forbidden-phrase hits when linting is enabled, else []."""
+    if enabled is None:
+        enabled = config.LINT_ENABLED
+    return _scan(text) if enabled else []
 
 
 def is_compliant(text: str) -> bool:
     return not lint(text)
 
 
-def build_header(tickers: list[str] | None, date: dt.date | None = None,
+def _disclaimer() -> str:
+    return config.DISCLAIMER_TEXT if config.DISCLAIMER_ENABLED else ""
+
+
+def build_header(tickers: list | None, date: dt.date | None = None,
                  label: str | None = None) -> str:
     date = date or dt.date.today()
     tag = label or (" · ".join(f"${t}" for t in tickers) if tickers else "Market")
     return f"📊 {tag} — {date.isoformat()}"
 
 
-def _footer() -> str:
-    footer = config.COMPLIANCE_DISCLAIMER
-    if config.CHANNEL_URL:
-        footer += f'\n\n<a href="{config.CHANNEL_URL}">{html.escape(config.CHANNEL_NAME)}</a>'
-    return footer
+def _strip_markdown(text: str) -> str:
+    """Captions are sent as plain text (no parse_mode), so markdown emphasis
+    markers would show literally. Remove **bold** / __underline__ / stray `#`."""
+    text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)
+    text = re.sub(r"__(.+?)__", r"\1", text)
+    text = re.sub(r"(?m)^\s*#{1,6}\s*", "", text)
+    return text
 
 
-def format_post(header: str, body: str) -> str:
-    """Assemble a compliant, Telegram-HTML-ready post.
+def format_caption(body: str) -> str:
+    """Photo caption: plain text + emojis, optional lint/disclaimer, hard-capped.
 
-    Raises ValueError if the body contains forbidden language — the caller
-    should skip publishing rather than post something non-compliant.
+    Raises ValueError only if linting is ON and the body trips a pattern.
     """
     violations = lint(body)
     if violations:
-        raise ValueError(f"compliance violation: {sorted(set(v.lower() for v in violations))}")
-    safe_header = html.escape(header)
-    safe_body = html.escape(body.strip())
-    post = f"<b>{safe_header}</b>\n\n{safe_body}{_footer()}"
+        raise ValueError(f"lint violation: {sorted(set(v.lower() for v in violations))}")
+    caption = _strip_markdown(body).strip() + _disclaimer()
+    return caption[: config.TELEGRAM_CAPTION_LIMIT]
+
+
+def format_post(header: str, body: str) -> str:
+    """HTML text message (discovery). Body is HTML-escaped for Telegram."""
+    violations = lint(body)
+    if violations:
+        raise ValueError(f"lint violation: {sorted(set(v.lower() for v in violations))}")
+    post = f"<b>{html.escape(header)}</b>\n\n{html.escape(body.strip())}{_disclaimer()}"
     return post[: config.TELEGRAM_MESSAGE_LIMIT]

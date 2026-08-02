@@ -21,6 +21,7 @@ import os
 
 from dotenv import load_dotenv
 
+import chart_generator
 import compliance
 import config
 import discovery as discovery_stage
@@ -64,12 +65,6 @@ def dedup_new(current_state: dict, items: list[dict]) -> list[dict]:
 
 # ---- technicals -------------------------------------------------------
 
-def build_tech_index() -> dict[str, dict]:
-    """{symbol: technical-summary} for every tracked symbol."""
-    ohlcv = prices.fetch_ohlcv()
-    return {sym: technicals.summarize(sym, df) for sym, df in ohlcv.items()}
-
-
 def primary_ticker(item: dict) -> str | None:
     if item.get("ticker"):
         return item["ticker"]
@@ -77,14 +72,23 @@ def primary_ticker(item: dict) -> str | None:
     return tickers[0] if tickers else None
 
 
-# ---- publish helper ---------------------------------------------------
+# ---- publish helpers --------------------------------------------------
 
-def publish(text: str, dry_run: bool) -> dict | None:
+def publish_text(text: str, dry_run: bool) -> dict | None:
     if dry_run:
-        print("\n----- DRY RUN POST -----\n" + text + "\n------------------------\n")
+        print("\n----- DRY RUN TEXT POST -----\n" + text + "\n-----------------------------\n")
         return {"dry_run": True}
     import telegram_publisher
     return telegram_publisher.post_message(text)
+
+
+def publish_photo(image_path: str, caption: str, dry_run: bool) -> dict | None:
+    if dry_run:
+        print(f"\n----- DRY RUN CHART POST (chart: {image_path}) -----\n"
+              + caption + "\n---------------------------------------------------\n")
+        return {"dry_run": True}
+    import telegram_publisher
+    return telegram_publisher.post_photo(image_path, caption)
 
 
 # ---- modes ------------------------------------------------------------
@@ -106,14 +110,19 @@ def run_auto(dry_run: bool) -> None:
     if not relevant:
         return
 
-    tech_index = build_tech_index()
+    # Price frames only for tickers that actually have a relevant item this run —
+    # no point fetching the whole universe when we post at most MAX_POSTS_PER_RUN.
+    wanted = {t for t in (primary_ticker(i) for i in relevant) if t}
+    frames = prices.fetch_ohlcv(sorted(wanted)) if wanted else {}
 
     published = 0
     for item in relevant:
         if published >= config.MAX_POSTS_PER_RUN:
             break
         ticker = primary_ticker(item)
-        tech = tech_index.get(ticker) if ticker else None
+        df = frames.get(ticker) if ticker else None
+        tech = technicals.summarize(ticker, df) if df is not None else None
+
         try:
             body = synthesizer.synthesize(client, item, tech)
         except Exception as exc:  # noqa: BLE001
@@ -125,16 +134,23 @@ def run_auto(dry_run: bool) -> None:
             print(f"[synth] empty body for {item.get('id')}, skipping")
             continue
 
-        header = compliance.build_header([ticker] if ticker else None)
+        # Ticker item with price data -> chart + caption. Otherwise text post.
         try:
-            post = compliance.format_post(header, body)
+            if df is not None and tech and tech.get("available"):
+                caption = compliance.format_caption(body)
+                enriched = technicals.enrich(df)
+                levels = technicals.find_key_levels(enriched)
+                chart_path = chart_generator.generate_chart(enriched, ticker, levels)
+                publish_photo(chart_path, caption, dry_run)
+            else:
+                header = compliance.build_header([ticker] if ticker else None)
+                publish_text(compliance.format_post(header, body), dry_run)
         except ValueError as exc:
-            # Non-compliant output — skip rather than publish, and log it.
-            print(f"[compliance] skipping {item.get('id')}: {exc}")
-            state.append_post_log({"skipped": True, "reason": str(exc), "id": item.get("id")})
+            print(f"[format] skipping {item.get('id')}: {exc}")
             continue
-
-        publish(post, dry_run)
+        except Exception as exc:  # noqa: BLE001 — a chart/publish failure shouldn't kill the run
+            print(f"[publish] failed for {item.get('id')}: {exc}")
+            continue
         published += 1
         # Dry-run is a pure preview: never mutate committed dedup state, so a
         # real run later still posts these once the channel is wired up.
@@ -187,7 +203,7 @@ def run_discovery(dry_run: bool, force: bool) -> None:
         print(f"[discovery] non-compliant output, not posting: {exc}")
         return
 
-    publish(post, dry_run)
+    publish_text(post, dry_run)
     if not dry_run:
         state.set_last_discovery_date(current_state, today.isoformat())
         state.append_post_log(

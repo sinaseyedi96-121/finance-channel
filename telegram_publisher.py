@@ -42,3 +42,18 @@ def post_message(text: str) -> dict:
     )
     resp.raise_for_status()
     return resp.json()["result"]
+
+
+def post_photo(image_path: str, caption: str) -> dict:
+    """Send a chart image with a plain-text (emoji) caption. Caption is capped at
+    Telegram's photo-caption limit."""
+    caption = caption[: config.TELEGRAM_CAPTION_LIMIT]
+    with open(image_path, "rb") as f:
+        resp = requests.post(
+            f"{_base_url()}/sendPhoto",
+            data={"chat_id": _chat_id(), "caption": caption},
+            files={"photo": f},
+            timeout=45,
+        )
+    resp.raise_for_status()
+    return resp.json()["result"]

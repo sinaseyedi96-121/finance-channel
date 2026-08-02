@@ -3,19 +3,26 @@
 Automated Telegram pipeline covering AI-driven "hype" stocks and their
 second-order beneficiaries: news, fundamentals, technicals, and weekly sector
 discovery. Same shape as the `crypto-market-channel` and `ai_news` pipelines —
-**ingest → classify → technicals → synthesize → compliance → publish**,
-scheduled by GitHub Actions with committed JSON state.
+**ingest → classify → technicals → chart + caption → publish**, scheduled by
+GitHub Actions with committed JSON state.
 
-All text generation uses **DeepSeek** (OpenAI-compatible): the cheap
-`deepseek-chat` for high-volume classification and **`deepseek-v4-pro`
-("DeepSeek Pro", a reasoning model)** for deep synthesis and weekly discovery.
-Swapping to Haiku/OpenAI is a `base_url` + `model` change in `config.py` only.
+Each news post is a **crypto-style technical chart** (candles + support/resistance
++ Bollinger + EMA 20/50/200 + RSI panel) with a **viral, emoji-rich caption**:
+headline → what happened → the tape read → what to watch (short-term / midterm).
+No legal disclaimer footer (owner's choice — toggle in `config.py`).
 
-> ⚠️ **`deepseek-v4-pro` is a reasoning model.** `max_tokens` caps *reasoning +
-> answer combined*, so the synthesis/discovery token budgets are sized with
-> headroom (see `SYNTHESIS_MAX_TOKENS` / `DISCOVERY_MAX_TOKENS`). If a budget is
-> set too low the visible answer comes back empty; the pipeline guards against
-> that by skipping empty bodies rather than posting them.
+Text generation uses **DeepSeek** (OpenAI-compatible). Swapping to Haiku/OpenAI
+is a `base_url` + `model` change in `config.py` only.
+
+> ⚠️ **Why captions use `deepseek-chat`, not `deepseek-v4-pro`.** `deepseek-v4-pro`
+> ("DeepSeek Pro") is a *reasoning* model: `max_tokens` caps reasoning + answer
+> combined, and on short writing tasks it reasons **without bound** — measured, it
+> consumed 2500 then 4000 tokens *entirely on reasoning* and returned an **empty
+> answer every time** (`finish_reason=length`). So it's unusable as the caption
+> writer at any sane budget. `deepseek-chat` writes the same caption reliably and
+> instantly (`finish_reason=stop`). The model names live in `config.py`; there's
+> also an empty-answer fallback to `deepseek-chat` in `synthesizer.py` if you ever
+> switch the primary back.
 
 ---
 
@@ -25,23 +32,25 @@ Swapping to Haiku/OpenAI is a `base_url` + `model` change in `config.py` only.
 |---|-------|--------|-------|
 | 1 | Ingest | `ingest/*.py` | — |
 | 2 | Classify + relevance gate | `classifier.py` | `deepseek-chat` (cheap) |
-| 3 | Technicals | `technicals.py` | — (pandas, no `pandas_ta`) |
-| 4 | Deep synthesis | `synthesizer.py` | `deepseek-v4-pro` |
-| 5 | Discovery (weekly) | `discovery.py` | `deepseek-v4-pro` |
-| 6 | Compliance / format | `compliance.py` | — |
-| 7 | Publish | `telegram_publisher.py` | — |
+| 3 | Technicals + S/R levels | `technicals.py` | — (pandas, no `pandas_ta`) |
+| 4 | Caption synthesis | `synthesizer.py` | `deepseek-chat` |
+| 5 | Chart render | `chart_generator.py` | — (mplfinance) |
+| 6 | Discovery (weekly) | `discovery.py` | `deepseek-chat` |
+| 7 | Format | `compliance.py` | — |
+| 8 | Publish (photo + caption) | `telegram_publisher.py` | — |
 
 Orchestrated by `main.py`. State lives in committed JSON (`post_history.json`,
 `posts_log.jsonl`); ephemeral CI runners have no other memory between runs.
 
-**Grounding rule (non-negotiable):** synthesis and discovery may only state
-figures/facts present in the retrieved-data block passed in the prompt. No
-numbers from memory, no invented figures, no price targets. Enforced in the
-system prompts *and* by only ever showing the model the data block.
+**Grounding rule (non-negotiable):** the caption may only state figures/facts
+present in the retrieved-data block passed in the prompt — and the technical
+numbers in that block are the *same ones drawn on the chart*, so caption and
+chart always agree. No numbers from memory, no invented figures.
 
-**Compliance:** every post gets a disclaimer footer, and `compliance.lint()`
-rejects any body containing buy/sell/entry/stop/target language before it can be
-published — descriptive-only framing to stay clear of MiFID II / CONSOB territory.
+**Format layer (`compliance.py`):** appends no disclaimer and runs no linter by
+default (`DISCLAIMER_ENABLED` / `LINT_ENABLED` are `False`). Both can be switched
+back on in `config.py` if the channel ever monetizes and wants trade-rec-safe
+framing. It also strips stray markdown (`**bold**`) since captions post as plain text.
 
 ---
 
@@ -52,7 +61,7 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 
 cp .env.example .env          # fill in keys (DEEPSEEK_KEY is already reused from your setup)
-.venv/bin/python -m unittest discover -s tests -v     # 22 tests
+.venv/bin/python -m unittest discover -s tests -v     # 25 tests
 
 # Preview without posting (also the automatic mode until Telegram is configured):
 .venv/bin/python main.py --mode auto --dry-run
@@ -109,8 +118,9 @@ All live at the top of **`config.py`**. Nothing else needs editing for tuning.
 |----------|---------|
 | `DEEPSEEK_BASE_URL` | OpenAI-compatible endpoint. Change this + the model names to swap providers. |
 | `CLASSIFIER_MODEL` / `_MAX_TOKENS` / `_TEMPERATURE` | Cheap tagging model (`deepseek-chat`), 220 tok, temp 0. |
-| `SYNTHESIS_MODEL` / `_MAX_TOKENS` / `_TEMPERATURE` | `deepseek-v4-pro`, 1200 tok (reasoning + answer), temp 0.3. |
-| `DISCOVERY_MODEL` / `_MAX_TOKENS` / `_TEMPERATURE` | `deepseek-v4-pro`, 2200 tok, temp 0.4. |
+| `SYNTHESIS_MODEL` / `_MAX_TOKENS` / `_TEMPERATURE` | Caption writer (`deepseek-chat`), 900 tok, temp 0.4. See the model note above for why not `deepseek-v4-pro`. |
+| `SYNTHESIS_FALLBACK_MODEL` / `_MAX_TOKENS` | Used if the primary returns empty (`deepseek-chat`, 900 tok). |
+| `DISCOVERY_MODEL` / `_MAX_TOKENS` / `_TEMPERATURE` | `deepseek-chat`, 1400 tok, temp 0.4. |
 
 ### Classifier
 | Constant | Meaning |
@@ -125,9 +135,17 @@ All live at the top of **`config.py`**. Nothing else needs editing for tuning.
 |----------|---------|
 | `PRICE_LOOKBACK_DAYS` / `PRICE_INTERVAL` | yfinance history window (400d) and interval (`1d`). |
 | `RSI_PERIOD` / `RSI_OVERBOUGHT` / `RSI_OVERSOLD` | Wilder RSI period 14; 70/30 bands. |
-| `EMA_PERIODS` | `[20, 50, 200]`. |
+| `EMA_PERIODS` | `[20, 50, 200]` (summary); `EMA_FAST` / `EMA_SLOW` are the two drawn thick on the chart. |
 | `MACD_FAST` / `MACD_SLOW` / `MACD_SIGNAL` | 12 / 26 / 9. |
 | `BB_PERIOD` / `BB_STD` | Bollinger 20-period, 2σ. |
+| `ATR_PERIOD` / `TREND_SLOPE_LOOKBACK` | ATR 14; EMA-slope confirmation window 5. |
+| `LEVEL_LOOKBACK` / `PIVOT_WINDOW` / `MIN_LEVEL_TOUCHES` / `LEVEL_CLUSTER_ATR_MULTIPLIER` | Pivot-cluster support/resistance detection (180 candles, 3-bar pivots, ≥2 touches, ATR×0.4 merge). |
+
+### Chart (`chart_generator.py`)
+| Constant | Meaning |
+|----------|---------|
+| `CHART_DIR` / `CHART_DPI` | Output dir (`charts/`, git-ignored) and image DPI (160). |
+| `CHART_DISPLAY_CANDLES` | Render the recent 120 candles (indicators computed on full history). |
 
 ### Ingest (`ingest/*.py`)
 | Constant | Meaning |
@@ -140,18 +158,18 @@ All live at the top of **`config.py`**. Nothing else needs editing for tuning.
 | `EIA_BASE_URL` / `EIA_WTI_SERIES` | EIA endpoint + WTI series. |
 | `RSS_FEEDS` / `RSS_MAX_ITEMS_PER_FEED` | Business RSS sources; ≤15 items/feed. Strictly filtered by the classifier. |
 
-### Compliance (`compliance.py`)
+### Format (`compliance.py`)
 | Constant | Meaning |
 |----------|---------|
-| `FORBIDDEN_PATTERNS` | Regexes the linter rejects (buy/sell/short/long/stop-loss/take-profit/entry price/price target). Benign uses like "long-term" and "short interest" are deliberately allowed. |
-| `COMPLIANCE_DISCLAIMER` | Mandatory footer appended in code. |
+| `DISCLAIMER_ENABLED` / `DISCLAIMER_TEXT` | Disclaimer footer — **off** by default. |
+| `LINT_ENABLED` / `FORBIDDEN_PATTERNS` | Buy/sell/stop/target linter — **off** by default; flip on to reject those patterns. |
 
 ### Telegram (`telegram_publisher.py`)
 | Constant | Meaning |
 |----------|---------|
 | `TELEGRAM_TOKEN_ENV` / `TELEGRAM_CHANNEL_ENV` | Env var names read at runtime. |
-| `TELEGRAM_MESSAGE_LIMIT` | 4096-char hard cap. |
-| `CHANNEL_NAME` / `CHANNEL_URL` | Footer backlink (set `CHANNEL_URL` once you have the public link; skipped while empty). |
+| `TELEGRAM_MESSAGE_LIMIT` / `TELEGRAM_CAPTION_LIMIT` | 4096-char text cap / 1024-char photo-caption cap. |
+| `CHANNEL_NAME` / `CHANNEL_URL` | Optional footer backlink (skipped while empty). |
 
 ### Discovery + paths
 | Constant | Meaning |
@@ -164,16 +182,24 @@ All live at the top of **`config.py`**. Nothing else needs editing for tuning.
 
 ## Post format
 
+Each news post is a **photo (technical chart) + caption**. The chart shows
+candles, EMA 20/50/200, Bollinger Bands, pivot support/resistance (labelled
+lines + zones), a volume panel, and an RSI panel with 30/70 lines. The caption:
+
 ```
-📊 $TICKER — YYYY-MM-DD
-What happened: <grounded fact, source named>
-Why it matters: <synthesis, grounded>
-Numbers to know: last price, % change, key technical level, next earnings (if in data)
-⚠️ Informational only, not financial advice. …
+🚀 <viral, informative emoji headline carrying the key number>
+
+📰 What happened: <grounded fact, source named>
+
+📊 The tape:
+• price vs Bollinger / EMAs  • RSI (overbought/oversold called out)  • MACD  • support/resistance
+
+👀 What to watch:
+• Short term (days): the level that decides the next move
+• Midterm (weeks–months): the bigger line (e.g. EMA200 / major support)
 ```
 
-Discovery posts use a `🔭 Worth Watching` header and end with an explicit
-"informational starting points, not recommendations" line.
+No disclaimer footer. Discovery posts are text with a `🔭 Worth Watching` header.
 
 ---
 

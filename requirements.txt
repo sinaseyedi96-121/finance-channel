@@ -5,3 +5,5 @@ yfinance
 feedparser
 openai
 python-dotenv
+matplotlib
+mplfinance

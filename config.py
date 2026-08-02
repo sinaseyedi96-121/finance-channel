@@ -68,17 +68,24 @@ CLASSIFIER_MODEL = "deepseek-chat"
 CLASSIFIER_MAX_TOKENS = 220
 CLASSIFIER_TEMPERATURE = 0.0            # deterministic tagging
 
-# Deep synthesis of items that clear the relevance bar ("DeepSeek Pro").
-# NOTE: deepseek-v4-pro is a REASONING model — max_tokens caps reasoning +
-# answer combined, and reasoning can run a few hundred tokens. These budgets
-# are sized with that headroom so the visible answer is never truncated.
-SYNTHESIS_MODEL = "deepseek-v4-pro"
-SYNTHESIS_MAX_TOKENS = 1200
-SYNTHESIS_TEMPERATURE = 0.3
+# --- IMPORTANT model note (measured, not assumed) --------------------
+# deepseek-v4-pro ("DeepSeek Pro") is a REASONING model: max_tokens caps
+# reasoning + answer COMBINED, and on short writing tasks like these captions it
+# reasons WITHOUT BOUND — it consumed 2500, then 4000 tokens entirely on
+# reasoning and returned an EMPTY answer every time (finish_reason=length). So
+# it is unusable as the caption writer at any sane budget. deepseek-chat writes
+# the same caption reliably and instantly (finish_reason=stop), so it is the
+# primary here. Switch *_MODEL back to "deepseek-v4-pro" only if DeepSeek ships
+# a way to cap its reasoning; the empty-answer fallback below will still catch it.
+SYNTHESIS_MODEL = "deepseek-chat"
+SYNTHESIS_MAX_TOKENS = 900
+SYNTHESIS_TEMPERATURE = 0.4
+SYNTHESIS_FALLBACK_MODEL = "deepseek-chat"   # used if the primary returns empty
+SYNTHESIS_FALLBACK_MAX_TOKENS = 900
 
-# Weekly discovery / sector-adjacency reasoning pass.
-DISCOVERY_MODEL = "deepseek-v4-pro"
-DISCOVERY_MAX_TOKENS = 2200
+# Weekly discovery / sector-adjacency pass (same reasoning-model caveat).
+DISCOVERY_MODEL = "deepseek-chat"
+DISCOVERY_MAX_TOKENS = 1400
 DISCOVERY_TEMPERATURE = 0.4
 
 # =====================================================================
@@ -118,6 +125,25 @@ MACD_SIGNAL = 9
 
 BB_PERIOD = 20
 BB_STD = 2
+
+# Two EMAs drawn on the chart as fast/slow (EMA200 is added as a third,
+# longer-term line for the "few months" view).
+EMA_FAST = 20
+EMA_SLOW = 50
+
+ATR_PERIOD = 14                        # volatility, also sizes the S/R cluster tolerance
+TREND_SLOPE_LOOKBACK = 5               # candles used to confirm EMA direction
+
+# ---- Support / resistance (pivot-cluster detection, ported from crypto) ----
+LEVEL_LOOKBACK = 180                   # ~9 months of daily candles
+PIVOT_WINDOW = 3                       # candles required on each side of a pivot
+MIN_LEVEL_TOUCHES = 2                  # repeated touches make a level "real"
+LEVEL_CLUSTER_ATR_MULTIPLIER = 0.40    # merge nearby pivots into one level
+
+# ---- Chart (crypto-style technical image) ----
+CHART_DIR = "charts"
+CHART_DISPLAY_CANDLES = 120            # compute on full history, render recent window
+CHART_DPI = 160
 
 # =====================================================================
 # INGEST  (stage 1 — one module per source under ingest/)
@@ -162,27 +188,24 @@ RSS_FEEDS = {
 RSS_MAX_ITEMS_PER_FEED = 15
 
 # =====================================================================
-# COMPLIANCE  (stage 6)
+# FORMAT  (stage 6 — was "compliance")
 # =====================================================================
-# Descriptive-only framing, same as the crypto channel, to stay clear of
-# MiFID II / CONSOB territory on repeated public trade recommendations.
-# The linter in compliance.py rejects any generated post containing these
-# patterns (case-insensitive, word-boundary matched where sensible).
-FORBIDDEN_PATTERNS = [
-    r"\bbuy\b", r"\bsell\b", r"\bshort\b(?!\s*(?:interest|seller|squeeze))",
-    r"\blong\b(?!\s*(?:-?term|er|est))",
-    r"\bstop[-\s]?loss\b", r"\btake[-\s]?profit\b",
-    r"\bentry\s+price\b", r"\bprice\s+target\b",
-    r"\bstrong\s+buy\b", r"\bstrong\s+sell\b",
-]
-
-# Mandatory footer appended in code (never left to the model to remember).
-# Rendered via Telegram HTML parse mode; post bodies are HTML-escaped first.
-COMPLIANCE_DISCLAIMER = (
-    "\n\n⚠️ Informational only, not financial advice. No buy/sell "
-    "recommendation, entry, stop, or target is given or implied. Figures are "
-    "as-reported from the named sources at the time of writing."
+# The channel is personal/informational and does NOT append a legal disclaimer
+# footer (owner's choice). Flip DISCLAIMER_ENABLED back on if that ever changes.
+DISCLAIMER_ENABLED = False
+DISCLAIMER_TEXT = (
+    "\n\n⚠️ Informational only, not financial advice."
 )
+
+# The old descriptive-only linter is kept but OFF by default — the channel wants
+# a clear, punchy read of what's happening. Flip LINT_ENABLED on to reject the
+# patterns below (e.g. if you later monetize and want to avoid trade-rec framing).
+LINT_ENABLED = False
+FORBIDDEN_PATTERNS = [
+    r"\bbuy\b", r"\bsell\b",
+    r"\bstop[-\s]?loss\b", r"\btake[-\s]?profit\b",
+    r"\bprice\s+target\b",
+]
 
 # =====================================================================
 # TELEGRAM  (stage 7)
@@ -192,6 +215,7 @@ COMPLIANCE_DISCLAIMER = (
 TELEGRAM_TOKEN_ENV = "TELEGRAM_TOKEN"
 TELEGRAM_CHANNEL_ENV = "TELEGRAM_CHANNEL"
 TELEGRAM_MESSAGE_LIMIT = 4096          # Telegram hard cap on text messages
+TELEGRAM_CAPTION_LIMIT = 1024          # Telegram hard cap on photo captions
 
 # Channel display name + link, appended as a clickable footer so forwarded
 # posts still drive back to the source. Fill CHANNEL_URL once you have the

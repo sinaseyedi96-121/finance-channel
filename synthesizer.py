@@ -1,16 +1,14 @@
 """
 Stage 4 — deep synthesis with deepseek-v4-pro ("DeepSeek Pro").
 
-Produces the "what happened / why it matters / numbers to know" writeup for
-each item that cleared the relevance bar.
+Writes the emoji-rich, viral-but-informative Telegram caption that rides
+alongside the technical chart: a punchy headline, what happened, the tape read,
+and a short "what to watch" (short-term + midterm). No legal disclaimer footer.
 
-GROUNDING RULE (non-negotiable): the model may only state figures and facts
-present in the retrieved-data block passed in the prompt. No numbers from
-memory, no invented figures, no filled-in price targets. This is enforced two
-ways: (1) the system prompt below forbids it in the strongest terms, and (2)
-the retrieved-data block is the ONLY source of numbers the model is shown, and
-the compliance linter (compliance.py) rejects the output if it smuggles in
-buy/sell/target language.
+GROUNDING RULE (still non-negotiable): the model may only state figures/facts
+present in the RETRIEVED DATA block. No numbers from memory, no invented
+figures. The technical numbers in the block are the SAME ones drawn on the
+chart, so caption and chart always agree.
 """
 
 from __future__ import annotations
@@ -20,46 +18,45 @@ import json
 import config
 from llm_client import chat
 
-SYSTEM_PROMPT = """You write concise, factual market notes for a Telegram channel
-about AI-driven stocks. You will be given a RETRIEVED DATA block (a news/filing
-item plus a technical snapshot of the ticker).
+SYSTEM_PROMPT = f"""You write punchy, emoji-rich Telegram captions about AI-driven
+stocks for a fast, informative markets channel. Each caption rides next to a
+technical chart (candles + support/resistance + Bollinger + EMA 20/50/200 + RSI).
 
-ABSOLUTE GROUNDING RULE — read carefully:
-- You may ONLY state figures, prices, percentages, dates, and facts that appear
-  verbatim in the RETRIEVED DATA block.
-- You must NOT recall any number from your own training/memory.
-- If a number is not in the block, do not state it. Say "not disclosed" instead.
-- Never invent a price target, valuation, forecast, or earnings figure.
+Write the caption in this shape (keep it tight — UNDER {config.TELEGRAM_CAPTION_LIMIT - 300} characters total):
 
-STYLE:
-- Structure the note as three short parts:
-  1. What happened — the concrete event, and name the source.
-  2. Why it matters — brief interpretation, grounded only in the block.
-  3. Numbers to know — last price, % change, one key technical level, next
-     earnings date IF it is present in the block. Omit any that are absent.
-- Neutral, descriptive tone. No hype.
+1. HEADLINE: one bold, viral, INFORMATIVE line led by an emoji. It must carry the
+   single most important fact/number (e.g. the % move, the earnings beat, the
+   breakout). Make someone want to read on — but never clickbait a number that
+   isn't in the data.
+2. 📰 What happened: 1-2 sentences on the news/event, name the source.
+3. 📊 The tape: 2-4 quick bullets on the technicals — price vs Bollinger/EMAs,
+   RSI (call out overbought/oversold clearly), MACD, and the key support/
+   resistance levels. Use emoji markers (🟢🔴🔥✅⚠️📈📉).
+4. 👀 What to watch:
+   • Short term (next few days): the level or signal that decides the next move.
+   • Midterm (weeks–months): the bigger line (e.g. EMA200 / major support).
 
-FORBIDDEN (compliance): do NOT use the words buy, sell, long, short, entry,
-stop-loss, take-profit, or "price target". Do NOT tell the reader to do anything
-with the stock. Describe only. A disclaimer footer is added later by code — do
-not write your own.
-
-Keep it under 150 words. Plain text (no markdown headers)."""
+RULES:
+- ONLY use figures present in the RETRIEVED DATA block. If a number (e.g. next
+  earnings date) isn't there, don't state it.
+- The technical figures you cite MUST match the block (they are on the chart).
+- Describe and contextualize freely — you may say a level is being tested, that
+  momentum is building/fading, that RSI is stretched. Do NOT append any
+  "not financial advice" disclaimer; the channel does not use one.
+- Plenty of emojis, but stay readable. Plain text + bullets, no markdown headers."""
 
 
 def build_data_block(item: dict, tech: dict | None) -> str:
-    """The ONLY source of facts the model is allowed to quote."""
+    """The ONLY source of facts the model may quote (technicals match the chart)."""
     block = {
         "news_item": {
             "headline": item.get("headline"),
             "summary": item.get("summary"),
             "source_name": item.get("publisher") or item.get("source"),
-            "url": item.get("url"),
             "published": item.get("published"),
-            "category": item.get("classification", {}).get("category"),
-            "tickers": item.get("classification", {}).get("tickers") or (
-                [item["ticker"]] if item.get("ticker") else []
-            ),
+            "category": (item.get("classification") or {}).get("category"),
+            "tickers": (item.get("classification") or {}).get("tickers")
+            or ([item["ticker"]] if item.get("ticker") else []),
         },
         "technical_snapshot": tech or {"available": False},
     }
@@ -68,7 +65,7 @@ def build_data_block(item: dict, tech: dict | None) -> str:
 
 def synthesize(client, item: dict, tech: dict | None) -> str:
     user = "RETRIEVED DATA:\n" + build_data_block(item, tech)
-    return chat(
+    text = chat(
         client,
         model=config.SYNTHESIS_MODEL,
         system=SYSTEM_PROMPT,
@@ -76,3 +73,15 @@ def synthesize(client, item: dict, tech: dict | None) -> str:
         max_tokens=config.SYNTHESIS_MAX_TOKENS,
         temperature=config.SYNTHESIS_TEMPERATURE,
     )
+    # A reasoning model can burn the whole budget thinking and return nothing —
+    # fall back to the non-reasoning model so a post is never silently dropped.
+    if not text.strip():
+        text = chat(
+            client,
+            model=config.SYNTHESIS_FALLBACK_MODEL,
+            system=SYSTEM_PROMPT,
+            user=user,
+            max_tokens=config.SYNTHESIS_FALLBACK_MAX_TOKENS,
+            temperature=config.SYNTHESIS_TEMPERATURE,
+        )
+    return text

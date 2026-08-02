@@ -3,4 +3,5 @@
 __pycache__/
 *.pyc
 staging.json
+charts/*.png
 .DS_Store

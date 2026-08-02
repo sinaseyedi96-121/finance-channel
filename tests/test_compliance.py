@@ -10,39 +10,48 @@ import compliance  # noqa: E402
 import config  # noqa: E402
 
 
-class ComplianceTest(unittest.TestCase):
-    def test_clean_text_passes(self):
-        text = "NVDA reported revenue growth. The stock closed near its 50-day average."
-        self.assertTrue(compliance.is_compliant(text))
-        self.assertEqual(compliance.lint(text), [])
+class FormatTest(unittest.TestCase):
+    def test_lint_off_by_default(self):
+        # Channel runs with LINT_ENABLED False — nothing is rejected.
+        self.assertFalse(config.LINT_ENABLED)
+        self.assertTrue(compliance.is_compliant("you should buy this now"))
 
-    def test_buy_sell_flagged(self):
-        for bad in ["You should buy NVDA", "time to sell", "strong buy rating"]:
-            self.assertFalse(compliance.is_compliant(bad), bad)
+    def test_scan_still_detects_when_forced(self):
+        # The underlying scanner works regardless of the toggle.
+        self.assertTrue(compliance.lint("time to buy", enabled=True))
+        self.assertEqual(compliance.lint("time to buy", enabled=False), [])
 
-    def test_stop_and_target_flagged(self):
-        self.assertFalse(compliance.is_compliant("set a stop-loss at 100"))
-        self.assertFalse(compliance.is_compliant("price target of 200"))
-        self.assertFalse(compliance.is_compliant("entry price 150"))
+    def test_caption_no_disclaimer_by_default(self):
+        self.assertFalse(config.DISCLAIMER_ENABLED)
+        cap = compliance.format_caption("🚀 NVDA rips +5% today")
+        self.assertNotIn("not financial advice", cap.lower())
+        self.assertIn("🚀", cap)
 
-    def test_benign_long_short_not_over_flagged(self):
-        # "long-term" and "short interest" are legitimate descriptive usage.
-        self.assertTrue(compliance.is_compliant("a long-term uptrend"))
-        self.assertTrue(compliance.is_compliant("short interest rose this week"))
+    def test_caption_capped_at_limit(self):
+        cap = compliance.format_caption("x" * 5000)
+        self.assertLessEqual(len(cap), config.TELEGRAM_CAPTION_LIMIT)
 
-    def test_format_post_appends_footer_and_escapes(self):
-        post = compliance.format_post("NVDA — 2026-08-02", "Revenue rose. Facts only.")
-        self.assertIn("<b>", post)
-        self.assertIn(config.COMPLIANCE_DISCLAIMER.strip().split("\n")[0][:20], post)
+    def test_caption_strips_markdown_bold(self):
+        cap = compliance.format_caption("🔥 **MSFT Surges** and __holds__ ## Header")
+        self.assertNotIn("**", cap)
+        self.assertNotIn("__", cap)
+        self.assertIn("MSFT Surges", cap)
+        self.assertIn("Header", cap)
 
-    def test_format_post_rejects_violation(self):
-        with self.assertRaises(ValueError):
-            compliance.format_post("H", "You should buy this now")
+    def test_disclaimer_appended_when_enabled(self):
+        orig = config.DISCLAIMER_ENABLED
+        config.DISCLAIMER_ENABLED = True
+        try:
+            cap = compliance.format_caption("NVDA update")
+            self.assertIn("not financial advice", cap.lower())
+        finally:
+            config.DISCLAIMER_ENABLED = orig
 
-    def test_html_escape_in_body(self):
-        post = compliance.format_post("H", "earnings <up> & steady")
+    def test_format_post_escapes_html(self):
+        post = compliance.format_post("Header", "earnings <up> & steady")
         self.assertIn("&lt;up&gt;", post)
         self.assertIn("&amp;", post)
+        self.assertIn("<b>", post)
 
 
 if __name__ == "__main__":
