@@ -62,6 +62,33 @@ class TechnicalsTest(unittest.TestCase):
         summary = technicals.summarize("NONE", pd.DataFrame())
         self.assertFalse(summary["available"])
 
+    def test_risk_reward(self):
+        rr = technicals.risk_reward(100, 90, 130)
+        self.assertEqual(rr["downside_to_support_pct"], 10.0)
+        self.assertEqual(rr["upside_to_resistance_pct"], 30.0)
+        self.assertEqual(rr["reward_risk_to_resistance"], 3.0)   # 30 up / 10 down
+        self.assertEqual(technicals.risk_reward(None, 90, 130), {})
+
+    def test_fib_levels_ordered(self):
+        closes = [100 + i for i in range(250)]
+        fib = technicals.fib_levels(_frame(closes))
+        self.assertGreater(fib["swing_high"], fib["swing_low"])
+        # deeper retracement = lower price
+        self.assertGreater(fib["fib_0.236"], fib["fib_0.786"])
+
+    def test_multi_timeframe_keys(self):
+        closes = [100 + i for i in range(300)]
+        mtf = technicals.multi_timeframe(technicals.enrich(_frame(closes)))
+        self.assertIn("weekly", mtf)
+        self.assertIn("monthly", mtf)
+        self.assertIn(mtf["weekly"], {"up", "down", "sideways", "n/a"})
+
+    def test_summarize_has_pro_fields(self):
+        closes = [100 + i for i in range(250)]
+        s = technicals.summarize("T", _frame(closes))
+        for k in ("trend_multi_timeframe", "ma50_vs_ma200", "risk_reward", "fib", "volume"):
+            self.assertIn(k, s)
+
 
 if __name__ == "__main__":
     unittest.main()

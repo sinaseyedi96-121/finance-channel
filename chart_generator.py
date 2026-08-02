@@ -61,6 +61,7 @@ def _style():
         rc={
             "axes.edgecolor": GRID,
             "axes.labelcolor": MUTED,
+            "font.family": FONT_FAMILY,   # mpf's rc overrides global rcParams during plot
             "font.size": 10,
             "text.color": TEXT,
             "xtick.color": MUTED,

@@ -56,6 +56,11 @@ VALUE_UNIVERSE = {
     "copper_and_industrial_metals": ["FCX", "SCCO"],
     "water_infrastructure": ["XYL", "WTRG"],
     "semi_equipment_and_materials": ["LRCX", "KLAC", "ENTG"],
+    "quantum_computing": ["IONQ", "RGTI", "QBTS", "QUBT"],
+    "defense_and_military": ["LMT", "RTX", "NOC", "KTOS", "AVAV"],
+    # "Irreplaceable" moats — companies doing something no one else can at scale
+    # (EUV litho, leading-edge foundry, chip-design EDA, unique x86+GPU, CPU IP).
+    "irreplaceable_moats": ["ASML", "TSM", "SNPS", "CDNS", "AMD", "ARM"],
 }
 
 # Broad-market context. S&P 500 is required so every post can frame a move

@@ -137,6 +137,16 @@ def run_auto(dry_run: bool) -> None:
     frames = prices.fetch_ohlcv(sorted(wanted | set(macro_syms))) if (wanted or macro_syms) else {}
     macro_context = macro_snapshots(frames)
 
+    # Fundamentals are fetched lazily (yfinance .info is slow) — only for the
+    # tickers we actually post, cached so a repeat ticker isn't re-fetched.
+    fund_cache: dict = {}
+
+    def get_fund(tkr):
+        if tkr not in fund_cache:
+            got = fundamentals.fetch([tkr])
+            fund_cache[tkr] = got[0] if got else None
+        return fund_cache[tkr]
+
     published = 0
     for item in relevant:
         if published >= config.MAX_POSTS_PER_RUN:
@@ -144,10 +154,12 @@ def run_auto(dry_run: bool) -> None:
         ticker = primary_ticker(item)
         df = frames.get(ticker) if ticker else None
         tech = technicals.summarize(ticker, df) if df is not None else None
+        fund = get_fund(ticker) if ticker else None
 
         try:
-            # Pro reasons over the item + technicals + macro; Chat writes the caption.
-            analysis = analyst.analyze(client, item, tech, macro=macro_context)
+            # Pro reasons over the item + fundamentals + technicals + macro;
+            # Chat writes the caption.
+            analysis = analyst.analyze(client, item, tech, fund=fund, macro=macro_context)
             body = synthesizer.synthesize(client, item, tech, analysis)
         except Exception as exc:  # noqa: BLE001
             print(f"[synth] failed for {item.get('id')}: {exc}")

@@ -200,6 +200,91 @@ def trend_state(df: pd.DataFrame) -> str:
 
 
 # ---------------------------------------------------------------------
+# professional-grade extras (multi-timeframe, fib, risk/reward, MA cross, volume)
+# ---------------------------------------------------------------------
+
+def _tf_trend(close: pd.Series) -> str:
+    """Up/down/sideways for a resampled (weekly/monthly) close series."""
+    close = close.dropna()
+    if len(close) < 6:
+        return "n/a"
+    fast = close.ewm(span=min(10, max(2, len(close) // 2)), adjust=False).mean()
+    slow = close.ewm(span=min(30, len(close) - 1), adjust=False).mean()
+    up = fast.iloc[-1] > slow.iloc[-1] and close.iloc[-1] > slow.iloc[-1]
+    rising = fast.iloc[-1] > fast.iloc[-min(3, len(fast))]
+    if up and rising:
+        return "up"
+    if not up and not rising:
+        return "down"
+    return "sideways"
+
+
+def multi_timeframe(df: pd.DataFrame) -> dict:
+    """Trend on daily / weekly / monthly — the Citadel-style top-down read."""
+    close = df["Close"].astype(float)
+    return {
+        "weekly": _tf_trend(close.resample("W-FRI").last()),
+        "monthly": _tf_trend(close.resample("ME").last()),
+    }
+
+
+def fib_levels(df: pd.DataFrame, lookback: int = config.LEVEL_LOOKBACK) -> dict:
+    """Fibonacci retracement levels across the recent swing high→low."""
+    window = df.tail(lookback)
+    hi = float(window["High"].max())
+    lo = float(window["Low"].min())
+    diff = hi - lo
+    if diff <= 0:
+        return {}
+    out = {"swing_high": round(hi, 2), "swing_low": round(lo, 2)}
+    for r in (0.236, 0.382, 0.5, 0.618, 0.786):
+        out[f"fib_{r}"] = round(hi - diff * r, 2)
+    return out
+
+
+def risk_reward(price, support, resistance) -> dict:
+    """Downside to support, upside to resistance, and the reward:risk ratio."""
+    if not (price and support and resistance) or price <= 0:
+        return {}
+    out = {
+        "downside_to_support_pct": round((price - support) / price * 100, 2),
+        "upside_to_resistance_pct": round((resistance - price) / price * 100, 2),
+    }
+    if price > support:
+        out["reward_risk_to_resistance"] = round((resistance - price) / (price - support), 2)
+    return out
+
+
+def ma50_vs_ma200(df: pd.DataFrame) -> str:
+    """Golden/death cross state of EMA50 vs EMA200 (the long-term regime)."""
+    s, l = df["ema_slow"], df["ema_long"]
+    if pd.isna(s.iloc[-1]) or pd.isna(l.iloc[-1]):
+        return "n/a"
+    now = s.iloc[-1] > l.iloc[-1]
+    prev_i = min(6, len(s) - 1)
+    prev = s.iloc[-1 - prev_i] > l.iloc[-1 - prev_i]
+    if now and not prev:
+        return "golden_cross_recent"
+    if not now and prev:
+        return "death_cross_recent"
+    return "bullish_50>200" if now else "bearish_50<200"
+
+
+def volume_read(df: pd.DataFrame) -> dict:
+    """Recent volume trend + whether up-days or down-days carry the volume."""
+    vol = df["Volume"].astype(float)
+    if vol.tail(30).sum() == 0:
+        return {}
+    recent = vol.tail(10).mean()
+    prior = vol.tail(30).head(20).mean() or recent
+    trend = "rising" if recent > prior * 1.1 else "falling" if recent < prior * 0.9 else "flat"
+    last20 = df.tail(20)
+    up_vol = last20.loc[last20["Close"] >= last20["Open"], "Volume"].sum()
+    down_vol = last20.loc[last20["Close"] < last20["Open"], "Volume"].sum()
+    return {"trend": trend, "bias": "buyers" if up_vol >= down_vol else "sellers"}
+
+
+# ---------------------------------------------------------------------
 # compact grounding snapshot for the caption model
 # ---------------------------------------------------------------------
 
@@ -236,6 +321,8 @@ def summarize(symbol: str, df: pd.DataFrame) -> dict:
     except Exception:  # noqa: BLE001
         levels = {}
 
+    support = levels.get("support")
+    resistance = levels.get("resistance")
     return {
         "symbol": symbol,
         "available": True,
@@ -244,12 +331,17 @@ def summarize(symbol: str, df: pd.DataFrame) -> dict:
         "pct_change_1d": _round(pct_change),
         "rsi": latest_rsi,
         "rsi_state": rsi_state,
-        "trend": trend_state(enriched),
+        "trend_daily": trend_state(enriched),
+        "trend_multi_timeframe": multi_timeframe(enriched),
         **emas,
+        "ma50_vs_ma200": ma50_vs_ma200(enriched),
         "macd_hist": _round(enriched["macd_hist"].iloc[-1], 4),
         "bb_upper": _round(enriched["bb_upper"].iloc[-1]),
         "bb_lower": _round(enriched["bb_lower"].iloc[-1]),
-        "support": levels.get("support"),
-        "resistance": levels.get("resistance"),
+        "support": support,
+        "resistance": resistance,
+        "risk_reward": risk_reward(_round(last), support, resistance),
+        "fib": fib_levels(enriched),
         "atr_pct": _round(enriched["atr_pct"].iloc[-1]),
+        "volume": volume_read(enriched),
     }

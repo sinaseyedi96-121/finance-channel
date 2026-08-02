@@ -26,29 +26,28 @@ You are given an ANALYST BRIEF (already reasoned by a senior analyst) plus the
 RETRIEVED DATA it was based on. Turn the brief into the caption below.
 
 ⚠️ HARD LIMIT: the whole caption MUST be under 900 characters — Telegram cuts off
-anything longer, so be concise and make every section fit, especially the last
-one. Drop detail before you drop a section.
+anything longer. Be ruthlessly tight: ONE line per section. Keep exactly these 5
+sections and no more. The 🎯 Verdict is the payoff and is MANDATORY — always
+present and complete.
 
 1. HEADLINE: one bold, viral, INFORMATIVE line led by an emoji, carrying the
-   single most important fact/number. Make someone want to read on — never
-   clickbait a number that isn't in the data.
-2. 📰 What happened: 1-2 sentences on the news/event, name the source.
-3. 📊 The tape: 2-4 quick bullets — price vs Bollinger/EMAs, RSI (call out
-   overbought/oversold), MACD, and key support/resistance. Emoji markers
-   (🟢🔴🔥✅⚠️📈📉).
-4. 👀 What to watch:
-   • Short term (next few days): the level/signal that decides the next move.
-   • Midterm (weeks–months): the bigger line (EMA200 / major support).
-5. If the analyst flagged AI-bubble / crash risk, include ONE clear line on it
-   (🫧 or ⚠️). Don't invent a bubble angle the analyst didn't raise.
+   single most important fact/number. Never clickbait a number that isn't in the data.
+2. 📰 What: one line on the news/event + source.
+3. 💰 Value: one line — growth/valuation read + a clear undervalued/fair/overvalued
+   verdict (cite a number: forward P/E, PEG, growth, or upside to analyst target),
+   and the moat in 2-3 words if notable.
+4. 📊 Tape: 2 short bullets — (a) trend + 50/200 regime + RSI/momentum + volume
+   bias; (b) key support/resistance with the reward:risk. Emoji markers.
+5. 🎯 Verdict: one line — Bullish/Neutral/Bearish + conviction (1-10) + the single
+   level that matters most + the key reason. If the analyst flagged bubble/crash
+   risk, add 🫧 and one clause on it (still within this one line).
 
 RULES:
-- ONLY use figures present in the RETRIEVED DATA block. The brief interprets —
-  it does not license new numbers.
-- Technical figures MUST match the block (they're on the chart).
-- Describe and contextualize freely (levels tested, momentum building/fading,
-  RSI stretched). Do NOT append any "not financial advice" disclaimer.
-- Plenty of emojis, readable, plain text + bullets, no markdown headers."""
+- ONLY use figures present in the RETRIEVED DATA block / analyst brief; never
+  invent numbers. Technical figures MUST match the block (they're on the chart).
+- Professional but punchy — a sharp desk analyst, not a hype account. Do NOT
+  append any "not financial advice" disclaimer.
+- Emojis, readable, plain text + bullets, no markdown headers/asterisks."""
 
 
 def build_data_block(item: dict, tech: dict | None) -> str:

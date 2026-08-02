@@ -43,6 +43,16 @@ SECTOR_THESES = {
     "semi_equipment_and_materials":
         "The tools and materials every chip is made with — picks-and-shovels of the "
         "AI compute supply chain.",
+    "quantum_computing":
+        "The next compute paradigm after AI — early, speculative, but a handful of "
+        "names own real hardware/IP; asymmetric optionality if it inflects.",
+    "defense_and_military":
+        "Rearmament + drones/autonomy + space; multi-year government backlogs make "
+        "revenue unusually visible, and some capabilities are single-source.",
+    "irreplaceable_moats":
+        "Companies doing something no one else can at scale — EUV lithography (ASML), "
+        "leading-edge foundry (TSM), chip-design EDA duopoly (SNPS/CDNS), unique "
+        "x86+GPU (AMD), CPU IP everywhere (ARM). Structurally un-substitutable.",
 }
 
 ANALYST_SYSTEM = """You are a value + thematic equity analyst. You are given
