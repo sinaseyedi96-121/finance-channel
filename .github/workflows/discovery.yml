@@ -1,4 +1,4 @@
-name: AI Stocks Discovery (weekly)
+name: Finance Discovery (weekly)
 
 on:
   schedule:
