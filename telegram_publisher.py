@@ -45,6 +45,22 @@ def post_message(text: str) -> dict:
     return resp.json()["result"]
 
 
+def post_text(text: str) -> dict:
+    """Send a PLAIN-text message (no parse_mode) — safe for free-form writeups
+    containing <, >, & that would break HTML parsing."""
+    resp = requests.post(
+        f"{_base_url()}/sendMessage",
+        data={
+            "chat_id": _chat_id(),
+            "text": text[: config.TELEGRAM_MESSAGE_LIMIT],
+            "disable_web_page_preview": "true",
+        },
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()["result"]
+
+
 def post_photo(image_path: str, caption: str) -> dict:
     """Send a chart image with a plain-text (emoji) caption. Caption is capped at
     Telegram's photo-caption limit."""

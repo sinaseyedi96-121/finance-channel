@@ -97,3 +97,18 @@ def format_post(header: str, body: str) -> str:
         raise ValueError(f"lint violation: {sorted(set(v.lower() for v in violations))}")
     post = f"<b>{html.escape(header)}</b>\n\n{html.escape(body.strip())}{_disclaimer()}"
     return post[: config.TELEGRAM_MESSAGE_LIMIT]
+
+
+def format_message(body: str) -> str:
+    """Plain-text message (emoji, no HTML/markdown), clipped to the message limit.
+
+    Used for long free-form writeups (e.g. Hidden Value) that contain characters
+    like <, >, & which would break Telegram's HTML parser — so these are sent with
+    no parse_mode.
+    """
+    violations = lint(body)
+    if violations:
+        raise ValueError(f"lint violation: {sorted(set(v.lower() for v in violations))}")
+    disclaimer = _disclaimer()
+    text = _strip_markdown(body).strip()
+    return _clip(text, config.TELEGRAM_MESSAGE_LIMIT - len(disclaimer)) + disclaimer

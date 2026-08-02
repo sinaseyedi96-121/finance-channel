@@ -42,6 +42,22 @@ ADJACENT_TICKERS = {
     "semi_equipment_memory": ["ASML", "AMAT", "MU"],
 }
 
+# "Hidden Value" universe: critically-important-but-often-overlooked sectors that
+# the AI / electrification / energy build-out actually runs on — rare earths &
+# critical minerals, data-center cooling & power delivery, uranium/nuclear, grid,
+# copper, water, and semi picks-and-shovels. The weekly Hidden Value post reasons
+# over these names' FUNDAMENTALS to surface ones that look undervalued vs their
+# price and/or whose structural importance the market underappreciates. Edit freely.
+VALUE_UNIVERSE = {
+    "rare_earth_and_critical_minerals": ["MP", "ALB", "UUUU", "LAC", "TMC"],
+    "data_center_cooling_and_power": ["VRT", "NVT", "ETN"],
+    "uranium_and_nuclear": ["CCJ", "LEU", "UEC", "SMR"],
+    "grid_and_electrification": ["PWR", "GEV", "AGX"],
+    "copper_and_industrial_metals": ["FCX", "SCCO"],
+    "water_infrastructure": ["XYL", "WTRG"],
+    "semi_equipment_and_materials": ["LRCX", "KLAC", "ENTG"],
+}
+
 # Broad-market context. S&P 500 is required so every post can frame a move
 # against the tape. yfinance uses the ^GSPC symbol for the index.
 INDEX_TICKERS = ["^GSPC"]
@@ -256,6 +272,16 @@ WEEK_AHEAD_WEEKDAY = 0                 # Monday
 WEEK_AHEAD_EARNINGS_DAYS = 7           # look this many days forward for earnings
 # Macro instruments charted in the week-ahead album (subset of MACRO_INSTRUMENTS).
 WEEK_AHEAD_CHART_INSTRUMENTS = ["S&P 500", "Gold", "Silver", "Oil (WTI)"]
+
+# =====================================================================
+# HIDDEN VALUE  (weekly, Wednesday) — undervalued + overlooked essentials
+# =====================================================================
+HIDDEN_VALUE_WEEKDAY = 2               # Wednesday
+HIDDEN_VALUE_MAX_NAMES = 5             # how many names the post introduces
+HIDDEN_VALUE_CHART_TOP = 5            # max charts in the album (the names the post features)
+# Names whose analyst mean target sits at least this far above price are treated
+# as showing a clear "fundamental value > current price" signal in the shortlist.
+HIDDEN_VALUE_MIN_UPSIDE_PCT = 15.0
 
 # =====================================================================
 # PATHS  (committed JSON state — the only memory between ephemeral CI runs)

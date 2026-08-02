@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import os
+import re
 
 from dotenv import load_dotenv
 
@@ -26,13 +27,14 @@ import chart_generator
 import compliance
 import config
 import discovery as discovery_stage
+import hidden_value as hidden_value_stage
 import state_manager as state
 import synthesizer
 import technicals
 import week_ahead as week_ahead_stage
 from ingest import (
     business_rss, earnings_calendar, eia_energy, finnhub_news, fred_macro,
-    prices, sec_edgar,
+    fundamentals, prices, sec_edgar,
 )
 from llm_client import get_client
 
@@ -295,11 +297,90 @@ def run_week_ahead(dry_run: bool, force: bool) -> None:
     print("[week_ahead] done" + (" (dry-run preview)" if dry_run else ""))
 
 
+def _chart_for(ticker: str, frames: dict) -> str | None:
+    """Enrich a fetched frame and render its chart; None on failure/no data."""
+    df = frames.get(ticker)
+    if df is None:
+        return None
+    try:
+        enriched = technicals.enrich(df)
+        levels = technicals.find_key_levels(enriched)
+        return chart_generator.generate_chart(enriched, ticker, levels)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[chart] {ticker} failed: {exc}")
+        return None
+
+
+def run_hidden_value(dry_run: bool, force: bool) -> None:
+    """Wednesday 'Hidden Value': undervalued + overlooked essential companies
+    (rare earths, cooling/power, uranium, grid, copper, water, semi tools),
+    reasoned by Pro and written by Chat, with charts for the top names."""
+    current_state = state.load_state()
+    today = dt.date.today()
+    if not force and today.weekday() != config.HIDDEN_VALUE_WEEKDAY:
+        print(f"[hidden_value] not scheduled today (weekday {today.weekday()} != {config.HIDDEN_VALUE_WEEKDAY})")
+        return
+    if not force and state.get_marker(current_state, "last_hidden_value") == today.isoformat():
+        print("[hidden_value] already ran today")
+        return
+
+    # Dedup the value universe and remember each ticker's sector thesis.
+    sector_map, universe = {}, []
+    for thesis, tickers in config.VALUE_UNIVERSE.items():
+        for t in tickers:
+            if t not in sector_map:
+                sector_map[t] = thesis
+                universe.append(t)
+
+    client = get_client()
+    funds = fundamentals.fetch(universe)
+    print(f"[hidden_value] fundamentals for {len(funds)}/{len(universe)} names")
+    if not funds:
+        print("[hidden_value] no fundamentals available; skipping")
+        return
+
+    ranked = hidden_value_stage.rank(funds)
+    body = hidden_value_stage.run_hidden_value(client, ranked, sector_map)
+    if not body.strip():
+        print("[hidden_value] empty body; skipping")
+        return
+    text = compliance.format_message(body)
+
+    # Chart the names the post actually features (writer emits "$TICKER"), so the
+    # album matches the writeup. Fall back to top-by-score if none parse.
+    featured = []
+    for sym in re.findall(r"\$([A-Z]{1,5})", text):
+        if sym in sector_map and sym not in featured:
+            featured.append(sym)
+    chart_syms = (featured or [r["ticker"] for r in ranked])[: config.HIDDEN_VALUE_CHART_TOP]
+    frames = prices.fetch_ohlcv(chart_syms)
+    chart_paths = [p for p in (_chart_for(t, frames) for t in chart_syms) if p]
+
+    if dry_run:
+        print(f"\n----- DRY RUN HIDDEN VALUE (charts: {chart_paths}) -----\n{text}\n-----\n")
+    else:
+        import telegram_publisher
+        telegram_publisher.post_text(text)
+        if chart_paths:
+            telegram_publisher.post_album(chart_paths, "💎 Hidden Value — charts for the names above")
+
+    if not dry_run:
+        state.set_marker(current_state, "last_hidden_value", today.isoformat())
+        state.append_post_log(
+            {"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "hidden_value", "dry_run": dry_run}
+        )
+        state.save_state(current_state)
+    print("[hidden_value] done" + (" (dry-run preview)" if dry_run else ""))
+
+
 # ---- entrypoint -------------------------------------------------------
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", default="auto", choices=["auto", "discovery", "week_ahead"])
+    parser.add_argument(
+        "--mode", default="auto",
+        choices=["auto", "discovery", "week_ahead", "hidden_value"],
+    )
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
@@ -315,6 +396,8 @@ def main() -> None:
         run_discovery(dry_run, args.force)
     elif args.mode == "week_ahead":
         run_week_ahead(dry_run, args.force)
+    elif args.mode == "hidden_value":
+        run_hidden_value(dry_run, args.force)
     else:
         run_auto(dry_run)
 
