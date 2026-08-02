@@ -79,6 +79,15 @@ def set_last_discovery_date(state: dict, date_iso: str) -> None:
     state["last_discovery"] = date_iso
 
 
+def get_marker(state: dict, key: str) -> str | None:
+    """Generic once-per-day marker (e.g. 'last_week_ahead')."""
+    return state.get(key)
+
+
+def set_marker(state: dict, key: str, date_iso: str) -> None:
+    state[key] = date_iso
+
+
 # ---- published-post log ----------------------------------------------
 
 def append_post_log(entry: dict) -> None:

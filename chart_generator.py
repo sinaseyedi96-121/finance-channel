@@ -26,11 +26,10 @@ import config
 FONT_DIR = os.path.join(os.path.dirname(__file__), "fonts")
 FONT_FAMILY = "PT Serif"
 for _font_file in ("PTSerif-Regular.ttf", "PTSerif-Bold.ttf"):
-    _path = os.path.join(FONT_DIR, _font_file)
-    if os.path.exists(_path):
-        fm.fontManager.addfont(_path)
-if any(f.name == FONT_FAMILY for f in fm.fontManager.ttflist):
-    plt.rcParams["font.family"] = FONT_FAMILY
+    fm.fontManager.addfont(os.path.join(FONT_DIR, _font_file))
+# Set unconditionally (exactly as the crypto channel does) so the charts render
+# in PT Serif, not the matplotlib default sans-serif.
+plt.rcParams["font.family"] = FONT_FAMILY
 
 BACKGROUND = "#08111F"
 PANEL = "#0D192A"
@@ -104,11 +103,13 @@ def _price_label(ax, value: float, label: str, color: str) -> None:
     )
 
 
-def generate_chart(df, ticker: str, levels: dict) -> str:
+def generate_chart(df, ticker: str, levels: dict, display_name: str | None = None) -> str:
     """Render the technical chart and return the saved PNG path. `df` must be
-    enriched (technicals.enrich)."""
+    enriched (technicals.enrich). `display_name` overrides the chart title for
+    non-ticker instruments (e.g. "Gold" instead of "$GC=F")."""
     os.makedirs(config.CHART_DIR, exist_ok=True)
-    out_path = os.path.join(config.CHART_DIR, f"{ticker}.png")
+    safe = ticker.replace("^", "").replace("=", "_").replace("/", "_")
+    out_path = os.path.join(config.CHART_DIR, f"{safe}.png")
     display = df.tail(config.CHART_DISPLAY_CANDLES).copy()
 
     add_plots = [
@@ -217,8 +218,9 @@ def generate_chart(df, ticker: str, levels: dict) -> str:
         f"BB WIDTH  {last['bb_width_pct']:.2f}%"
     )
 
+    title = display_name if display_name else f"${ticker}"
     fig.subplots_adjust(left=0.075, right=0.93, top=0.82, bottom=0.12, hspace=0.08)
-    fig.text(0.075, 0.94, f"${ticker}  ·  DAILY", color=TEXT, fontsize=22,
+    fig.text(0.075, 0.94, f"{title}  ·  DAILY", color=TEXT, fontsize=22,
              fontweight="bold", ha="left", va="center")
     fig.text(0.075, 0.895, stats, color=MUTED, fontsize=10, ha="left", va="center")
     fig.text(0.925, 0.94, "TECHNICAL SNAPSHOT", color=EMA_FAST_C, fontsize=9,

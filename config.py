@@ -12,6 +12,9 @@ from __future__ import annotations
 # =====================================================================
 # WATCHLIST
 # =====================================================================
+# This is a FINANCE / markets channel. We're in the AI boom, so AI stocks are
+# the center of gravity and the most important names — but coverage is broad:
+# the index, commodities, macro, and especially AI-bubble / crash-risk analysis.
 
 # Primary names every post is allowed to cover. Edit freely — the pipeline
 # keys all per-ticker work (prices, technicals, news relevance) off this list.
@@ -19,6 +22,16 @@ CORE_TICKERS = [
     "PLTR", "NVDA", "GOOGL", "AMZN", "MSFT",
     "AMD", "AVGO", "SMCI", "TSLA", "META", "MSTR",
 ]
+
+# Broad-market instruments (index + commodities) that get their own charts —
+# the macro backdrop for the AI trade. yfinance symbols; the label is the chart
+# title. Futures symbols (=F) give continuous daily history.
+MACRO_INSTRUMENTS = {
+    "S&P 500": "^GSPC",
+    "Gold": "GC=F",
+    "Silver": "SI=F",
+    "Oil (WTI)": "CL=F",
+}
 
 # Adjacent / second-order sectors riding the same AI trend. Starting
 # hypotheses, not final — the weekly discovery layer proposes more over time.
@@ -43,7 +56,8 @@ MACRO_SERIES = {
 }
 
 # Every symbol the price/technicals layer should fetch each run: core names,
-# all adjacency members, and the index. De-duplicated, order preserved.
+# all adjacency members, the index, and the macro instruments. De-duplicated,
+# order preserved.
 def _all_price_symbols() -> list[str]:
     seen: dict[str, None] = {}
     for sym in CORE_TICKERS:
@@ -52,6 +66,8 @@ def _all_price_symbols() -> list[str]:
         for sym in group:
             seen.setdefault(sym, None)
     for sym in INDEX_TICKERS:
+        seen.setdefault(sym, None)
+    for sym in MACRO_INSTRUMENTS.values():
         seen.setdefault(sym, None)
     return list(seen)
 
@@ -68,23 +84,24 @@ CLASSIFIER_MODEL = "deepseek-chat"
 CLASSIFIER_MAX_TOKENS = 220
 CLASSIFIER_TEMPERATURE = 0.0            # deterministic tagging
 
-# --- IMPORTANT model note (measured, not assumed) --------------------
-# deepseek-v4-pro ("DeepSeek Pro") is a REASONING model: max_tokens caps
-# reasoning + answer COMBINED, and on short writing tasks like these captions it
-# reasons WITHOUT BOUND — it consumed 2500, then 4000 tokens entirely on
-# reasoning and returned an EMPTY answer every time (finish_reason=length). So
-# it is unusable as the caption writer at any sane budget. deepseek-chat writes
-# the same caption reliably and instantly (finish_reason=stop), so it is the
-# primary here. Switch *_MODEL back to "deepseek-v4-pro" only if DeepSeek ships
-# a way to cap its reasoning; the empty-answer fallback below will still catch it.
-SYNTHESIS_MODEL = "deepseek-chat"
+# --- Two-model pipeline: Pro reasons, Chat writes --------------------
+# ANALYST = deepseek-v4-pro ("DeepSeek Pro"): the reasoning model. It analyzes
+# the news + chart technicals + macro/politics and relates them to the stock and
+# the broader market (incl. AI-bubble / crash risk). Measured quirk: v4-pro often
+# spends its whole budget on chain-of-thought and returns an EMPTY `content` —
+# but the analysis lives in `reasoning_content`, which llm_client.reason() returns
+# as a fallback. So we always get its analysis.
+# WRITER = deepseek-chat: takes the analyst brief + grounded data and writes the
+# final publishable caption/post reliably and fast.
+ANALYST_MODEL = "deepseek-v4-pro"
+ANALYST_MAX_TOKENS = 3000
+ANALYST_TEMPERATURE = 0.3
+
+SYNTHESIS_MODEL = "deepseek-chat"            # writer
 SYNTHESIS_MAX_TOKENS = 900
 SYNTHESIS_TEMPERATURE = 0.4
-SYNTHESIS_FALLBACK_MODEL = "deepseek-chat"   # used if the primary returns empty
-SYNTHESIS_FALLBACK_MAX_TOKENS = 900
 
-# Weekly discovery / sector-adjacency pass (same reasoning-model caveat).
-DISCOVERY_MODEL = "deepseek-chat"
+DISCOVERY_MODEL = "deepseek-chat"            # writer (discovery reuses ANALYST_MODEL to reason)
 DISCOVERY_MAX_TOKENS = 1400
 DISCOVERY_TEMPERATURE = 0.4
 
@@ -92,7 +109,10 @@ DISCOVERY_TEMPERATURE = 0.4
 # CLASSIFIER  (stage 2)
 # =====================================================================
 # Categories the cheap model must choose from when tagging an item.
-CATEGORIES = ["earnings", "macro", "filing", "rating", "M&A", "politics", "other"]
+# "bubble_risk" captures AI-bubble / crash / correction / overvaluation narratives —
+# a first-class theme for this channel, not noise to discard.
+CATEGORIES = ["earnings", "macro", "filing", "rating", "M&A", "politics",
+              "bubble_risk", "commodities", "other"]
 
 # An item must score at least this to clear the relevance bar and be handed
 # to synthesis. The classifier returns a 0-5 relevance score.
@@ -220,14 +240,22 @@ TELEGRAM_CAPTION_LIMIT = 1024          # Telegram hard cap on photo captions
 # Channel display name + link, appended as a clickable footer so forwarded
 # posts still drive back to the source. Fill CHANNEL_URL once you have the
 # public link; leave as-is until then (footer link is skipped if empty).
-CHANNEL_NAME = "AI Stocks"
-CHANNEL_URL = ""                       # e.g. "https://t.me/your_channel"
+CHANNEL_NAME = "Finance AAR"
+CHANNEL_URL = "https://t.me/finance_arr"
 
 # =====================================================================
 # DISCOVERY  (stage 5 — weekly)
 # =====================================================================
 DISCOVERY_WEEKDAY = 6                  # Sunday (Monday=0 .. Sunday=6)
 DISCOVERY_NEWS_LOOKBACK_DAYS = 7
+
+# =====================================================================
+# WEEK AHEAD  (weekly "what to watch", Monday) — forward-looking preview
+# =====================================================================
+WEEK_AHEAD_WEEKDAY = 0                 # Monday
+WEEK_AHEAD_EARNINGS_DAYS = 7           # look this many days forward for earnings
+# Macro instruments charted in the week-ahead album (subset of MACRO_INSTRUMENTS).
+WEEK_AHEAD_CHART_INSTRUMENTS = ["S&P 500", "Gold", "Silver", "Oil (WTI)"]
 
 # =====================================================================
 # PATHS  (committed JSON state — the only memory between ephemeral CI runs)

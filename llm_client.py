@@ -47,3 +47,35 @@ def chat(
         ],
     )
     return (response.choices[0].message.content or "").strip()
+
+
+def reason(
+    client: OpenAI,
+    model: str,
+    system: str,
+    user: str,
+    *,
+    max_tokens: int,
+    temperature: float,
+) -> str:
+    """Run a reasoning model (deepseek-v4-pro) and return its analysis.
+
+    deepseek-v4-pro often spends the whole budget on chain-of-thought and returns
+    an EMPTY `content` — but the analysis itself lives in `reasoning_content`. So
+    we return `content` when present, otherwise fall back to `reasoning_content`.
+    Either way the caller gets the model's actual analysis to hand to the writer
+    model (deepseek-chat) for publishing.
+    """
+    response = client.chat.completions.create(
+        model=model,
+        max_tokens=max_tokens,
+        temperature=temperature,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+    )
+    msg = response.choices[0].message
+    content = (msg.content or "").strip()
+    reasoning = (getattr(msg, "reasoning_content", "") or "").strip()
+    return content or reasoning

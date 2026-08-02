@@ -64,6 +64,19 @@ def _strip_markdown(text: str) -> str:
     return text
 
 
+def _clip(text: str, limit: int) -> str:
+    """Trim to `limit` (inclusive of the ellipsis we add), cutting at a line/word
+    boundary so we never leave a sentence chopped mid-word."""
+    if len(text) <= limit:
+        return text
+    ell = " …"
+    window = text[: max(0, limit - len(ell))]
+    cut = window.rfind("\n")
+    if cut < len(window) * 0.6:           # no good line break near the end — try a space
+        cut = window.rfind(" ")
+    return (window[:cut] if cut > 0 else window).rstrip() + ell
+
+
 def format_caption(body: str) -> str:
     """Photo caption: plain text + emojis, optional lint/disclaimer, hard-capped.
 
@@ -72,8 +85,9 @@ def format_caption(body: str) -> str:
     violations = lint(body)
     if violations:
         raise ValueError(f"lint violation: {sorted(set(v.lower() for v in violations))}")
-    caption = _strip_markdown(body).strip() + _disclaimer()
-    return caption[: config.TELEGRAM_CAPTION_LIMIT]
+    disclaimer = _disclaimer()
+    caption = _strip_markdown(body).strip()
+    return _clip(caption, config.TELEGRAM_CAPTION_LIMIT - len(disclaimer)) + disclaimer
 
 
 def format_post(header: str, body: str) -> str:

@@ -21,6 +21,7 @@ import os
 
 from dotenv import load_dotenv
 
+import analyst
 import chart_generator
 import compliance
 import config
@@ -28,7 +29,11 @@ import discovery as discovery_stage
 import state_manager as state
 import synthesizer
 import technicals
-from ingest import business_rss, eia_energy, finnhub_news, fred_macro, prices, sec_edgar
+import week_ahead as week_ahead_stage
+from ingest import (
+    business_rss, earnings_calendar, eia_energy, finnhub_news, fred_macro,
+    prices, sec_edgar,
+)
 from llm_client import get_client
 
 load_dotenv()
@@ -72,6 +77,19 @@ def primary_ticker(item: dict) -> str | None:
     return tickers[0] if tickers else None
 
 
+def macro_snapshots(frames: dict) -> list[dict]:
+    """Compact technical summaries for the macro instruments (S&P/Gold/Silver/Oil)
+    the analyst uses as market backdrop. Labelled by their display name."""
+    out = []
+    for label, sym in config.MACRO_INSTRUMENTS.items():
+        df = frames.get(sym)
+        if df is not None:
+            snap = technicals.summarize(sym, df)
+            snap["label"] = label
+            out.append(snap)
+    return out
+
+
 # ---- publish helpers --------------------------------------------------
 
 def publish_text(text: str, dry_run: bool) -> dict | None:
@@ -110,10 +128,12 @@ def run_auto(dry_run: bool) -> None:
     if not relevant:
         return
 
-    # Price frames only for tickers that actually have a relevant item this run —
-    # no point fetching the whole universe when we post at most MAX_POSTS_PER_RUN.
+    # Price frames for tickers with a relevant item + the macro instruments (so
+    # the analyst can relate each item to the broader market).
     wanted = {t for t in (primary_ticker(i) for i in relevant) if t}
-    frames = prices.fetch_ohlcv(sorted(wanted)) if wanted else {}
+    macro_syms = list(config.MACRO_INSTRUMENTS.values())
+    frames = prices.fetch_ohlcv(sorted(wanted | set(macro_syms))) if (wanted or macro_syms) else {}
+    macro_context = macro_snapshots(frames)
 
     published = 0
     for item in relevant:
@@ -124,7 +144,9 @@ def run_auto(dry_run: bool) -> None:
         tech = technicals.summarize(ticker, df) if df is not None else None
 
         try:
-            body = synthesizer.synthesize(client, item, tech)
+            # Pro reasons over the item + technicals + macro; Chat writes the caption.
+            analysis = analyst.analyze(client, item, tech, macro=macro_context)
+            body = synthesizer.synthesize(client, item, tech, analysis)
         except Exception as exc:  # noqa: BLE001
             print(f"[synth] failed for {item.get('id')}: {exc}")
             continue
@@ -213,11 +235,71 @@ def run_discovery(dry_run: bool, force: bool) -> None:
     print("[discovery] done" + (" (dry-run preview)" if dry_run else ""))
 
 
+def run_week_ahead(dry_run: bool, force: bool) -> None:
+    """Monday 'What To Watch — The Week Ahead': a forward-looking preview
+    (upcoming earnings + macro + AI-bubble watch) plus an album of macro charts."""
+    current_state = state.load_state()
+    today = dt.date.today()
+    if not force and today.weekday() != config.WEEK_AHEAD_WEEKDAY:
+        print(f"[week_ahead] not scheduled today (weekday {today.weekday()} != {config.WEEK_AHEAD_WEEKDAY})")
+        return
+    if not force and state.get_marker(current_state, "last_week_ahead") == today.isoformat():
+        print("[week_ahead] already ran today")
+        return
+
+    client = get_client()
+    earnings = earnings_calendar.fetch()
+    news = finnhub_news.fetch() + business_rss.fetch()
+
+    # Charts for macro instruments + a core-technicals snapshot for the analyst.
+    macro_syms = [config.MACRO_INSTRUMENTS[n] for n in config.WEEK_AHEAD_CHART_INSTRUMENTS]
+    frames = prices.fetch_ohlcv(macro_syms + config.CORE_TICKERS)
+    macro_snaps = macro_snapshots(frames)
+    core_snaps = [technicals.summarize(t, frames[t]) for t in config.CORE_TICKERS if t in frames]
+
+    body = week_ahead_stage.run_week_ahead(client, earnings, macro_snaps, core_snaps, news)
+    if not body.strip():
+        print("[week_ahead] empty body; skipping")
+        return
+
+    # Build the macro-instrument charts for the album.
+    chart_paths = []
+    for label in config.WEEK_AHEAD_CHART_INSTRUMENTS:
+        sym = config.MACRO_INSTRUMENTS[label]
+        df = frames.get(sym)
+        if df is None:
+            continue
+        try:
+            enriched = technicals.enrich(df)
+            levels = technicals.find_key_levels(enriched)
+            chart_paths.append(chart_generator.generate_chart(enriched, sym, levels, display_name=label))
+        except Exception as exc:  # noqa: BLE001
+            print(f"[week_ahead] chart failed for {label}: {exc}")
+
+    caption = compliance.format_caption(body)
+    if dry_run:
+        print(f"\n----- DRY RUN WEEK-AHEAD (charts: {chart_paths}) -----\n{caption}\n-----\n")
+    else:
+        import telegram_publisher
+        if chart_paths:
+            telegram_publisher.post_album(chart_paths, caption[: config.TELEGRAM_CAPTION_LIMIT])
+        else:
+            telegram_publisher.post_message(caption[: config.TELEGRAM_MESSAGE_LIMIT])
+
+    if not dry_run:
+        state.set_marker(current_state, "last_week_ahead", today.isoformat())
+        state.append_post_log(
+            {"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "week_ahead", "dry_run": dry_run}
+        )
+        state.save_state(current_state)
+    print("[week_ahead] done" + (" (dry-run preview)" if dry_run else ""))
+
+
 # ---- entrypoint -------------------------------------------------------
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mode", default="auto", choices=["auto", "discovery"])
+    parser.add_argument("--mode", default="auto", choices=["auto", "discovery", "week_ahead"])
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
@@ -231,6 +313,8 @@ def main() -> None:
 
     if args.mode == "discovery":
         run_discovery(dry_run, args.force)
+    elif args.mode == "week_ahead":
+        run_week_ahead(dry_run, args.force)
     else:
         run_auto(dry_run)
 

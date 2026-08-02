@@ -1,28 +1,35 @@
-# AI Stocks Channel
+# Finance AAR — markets in the AI boom
 
-Automated Telegram pipeline covering AI-driven "hype" stocks and their
-second-order beneficiaries: news, fundamentals, technicals, and weekly sector
-discovery. Same shape as the `crypto-market-channel` and `ai_news` pipelines —
-**ingest → classify → technicals → chart + caption → publish**, scheduled by
-GitHub Actions with committed JSON state.
+Automated Telegram pipeline for a **finance / markets channel**. We're in the AI
+boom, so AI stocks are the center of gravity and the most important names — but
+coverage is broad: the index, commodities, macro, and especially **AI-bubble /
+crash-risk analysis**. Same shape as the `crypto-market-channel` / `ai_news`
+pipelines — **ingest → classify → analyze → chart + caption → publish**,
+scheduled by GitHub Actions with committed JSON state.
 
 Each news post is a **crypto-style technical chart** (candles + support/resistance
-+ Bollinger + EMA 20/50/200 + RSI panel) with a **viral, emoji-rich caption**:
-headline → what happened → the tape read → what to watch (short-term / midterm).
-No legal disclaimer footer (owner's choice — toggle in `config.py`).
++ Bollinger + EMA 20/50/200 + RSI panel, in PT Serif) with a **viral, emoji-rich
+caption**: headline → what happened → the tape → what to watch (short / midterm)
+→ a bubble-risk line when relevant. No disclaimer footer (owner's choice — toggle
+in `config.py`).
 
-Text generation uses **DeepSeek** (OpenAI-compatible). Swapping to Haiku/OpenAI
-is a `base_url` + `model` change in `config.py` only.
+### Two-model pipeline: Pro reasons, Chat writes
+Text generation uses **DeepSeek** (OpenAI-compatible) with both models working
+together, as intended:
 
-> ⚠️ **Why captions use `deepseek-chat`, not `deepseek-v4-pro`.** `deepseek-v4-pro`
-> ("DeepSeek Pro") is a *reasoning* model: `max_tokens` caps reasoning + answer
-> combined, and on short writing tasks it reasons **without bound** — measured, it
-> consumed 2500 then 4000 tokens *entirely on reasoning* and returned an **empty
-> answer every time** (`finish_reason=length`). So it's unusable as the caption
-> writer at any sane budget. `deepseek-chat` writes the same caption reliably and
-> instantly (`finish_reason=stop`). The model names live in `config.py`; there's
-> also an empty-answer fallback to `deepseek-chat` in `synthesizer.py` if you ever
-> switch the primary back.
+- **`deepseek-v4-pro` ("DeepSeek Pro") = the ANALYST.** It reasons over the news +
+  chart technicals + macro/politics and relates them to the stock and the broader
+  market, incl. AI-bubble/crash risk (`analyst.py`).
+- **`deepseek-chat` = the WRITER.** It turns the analyst's brief into the published
+  caption/post reliably and fast (`synthesizer.py`).
+
+> ⚠️ **The trick that makes v4-pro usable.** `deepseek-v4-pro` often spends its
+> whole `max_tokens` on chain-of-thought and returns an **empty `content`**
+> (measured: 2500 then 4000 tokens, all reasoning, `finish_reason=length`). But
+> the analysis itself lives in `reasoning_content` — so `llm_client.reason()`
+> returns `content` when present and falls back to `reasoning_content`. Either way
+> we capture Pro's analysis and hand it to Chat to publish. That's why the reasoning
+> model is used for analysis but never as the final writer.
 
 ---
 
@@ -33,24 +40,31 @@ is a `base_url` + `model` change in `config.py` only.
 | 1 | Ingest | `ingest/*.py` | — |
 | 2 | Classify + relevance gate | `classifier.py` | `deepseek-chat` (cheap) |
 | 3 | Technicals + S/R levels | `technicals.py` | — (pandas, no `pandas_ta`) |
-| 4 | Caption synthesis | `synthesizer.py` | `deepseek-chat` |
-| 5 | Chart render | `chart_generator.py` | — (mplfinance) |
-| 6 | Discovery (weekly) | `discovery.py` | `deepseek-chat` |
+| 4 | Analyze (reason) | `analyst.py` | `deepseek-v4-pro` |
+| 5 | Caption / post (write) | `synthesizer.py` · `discovery.py` · `week_ahead.py` | `deepseek-chat` |
+| 6 | Chart render | `chart_generator.py` | — (mplfinance, PT Serif) |
 | 7 | Format | `compliance.py` | — |
-| 8 | Publish (photo + caption) | `telegram_publisher.py` | — |
+| 8 | Publish (photo / album / text) | `telegram_publisher.py` | — |
 
-Orchestrated by `main.py`. State lives in committed JSON (`post_history.json`,
-`posts_log.jsonl`); ephemeral CI runners have no other memory between runs.
+Orchestrated by `main.py` (`--mode auto` / `discovery` / `week_ahead`). State
+lives in committed JSON (`post_history.json`, `posts_log.jsonl`); ephemeral CI
+runners have no other memory between runs.
 
-**Grounding rule (non-negotiable):** the caption may only state figures/facts
-present in the retrieved-data block passed in the prompt — and the technical
-numbers in that block are the *same ones drawn on the chart*, so caption and
-chart always agree. No numbers from memory, no invented figures.
+**Three post types:**
+- **News** (3×/day) — chart + caption per relevant item (incl. bubble-risk items).
+- **Week Ahead** (Mondays) — forward preview (upcoming earnings + macro + bubble
+  watch) as an album of macro charts (S&P 500, Gold, Silver, Oil) + caption.
+- **Discovery** (Sundays) — second-order beneficiaries "worth watching" note.
 
-**Format layer (`compliance.py`):** appends no disclaimer and runs no linter by
-default (`DISCLAIMER_ENABLED` / `LINT_ENABLED` are `False`). Both can be switched
-back on in `config.py` if the channel ever monetizes and wants trade-rec-safe
-framing. It also strips stray markdown (`**bold**`) since captions post as plain text.
+**Grounding rule (non-negotiable):** the writer may only state figures present in
+the retrieved-data block — and those technical numbers are the *same ones drawn
+on the chart*, so caption and chart always agree. The analyst brief interprets;
+it does not license new numbers.
+
+**Format layer (`compliance.py`):** no disclaimer and no linter by default
+(`DISCLAIMER_ENABLED` / `LINT_ENABLED` are `False`; flip on to reintroduce
+trade-rec-safe framing). Strips stray markdown and clips long captions at a line
+boundary (never mid-word).
 
 ---
 
@@ -61,7 +75,7 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 
 cp .env.example .env          # fill in keys (DEEPSEEK_KEY is already reused from your setup)
-.venv/bin/python -m unittest discover -s tests -v     # 25 tests
+.venv/bin/python -m unittest discover -s tests -v     # 26 tests
 
 # Preview without posting (also the automatic mode until Telegram is configured):
 .venv/bin/python main.py --mode auto --dry-run
@@ -77,8 +91,9 @@ the channel is wired up.
 |------|--------|
 | `--mode auto` | Standard news cycle (default). |
 | `--mode discovery` | Weekly "worth watching" pass (gated to Sunday unless `--force`). |
+| `--mode week_ahead` | Monday week-ahead preview + macro chart album (gated to Monday unless `--force`). |
 | `--dry-run` | Run everything, print posts instead of publishing; **no state written**. |
-| `--force` | Ignore the discovery weekday gate. |
+| `--force` | Ignore the weekday gate (discovery / week-ahead). |
 
 ---
 
@@ -107,7 +122,8 @@ All live at the top of **`config.py`**. Nothing else needs editing for tuning.
 ### Watchlist
 | Constant | Meaning |
 |----------|---------|
-| `CORE_TICKERS` | Primary names every post may cover: PLTR, NVDA, GOOGL, AMZN, MSFT, AMD, AVGO, SMCI, TSLA, META, MSTR. |
+| `CORE_TICKERS` | Primary AI names every post may cover: PLTR, NVDA, GOOGL, AMZN, MSFT, AMD, AVGO, SMCI, TSLA, META, MSTR. |
+| `MACRO_INSTRUMENTS` | Index + commodities that get their own charts: S&P 500 (`^GSPC`), Gold (`GC=F`), Silver (`SI=F`), Oil (`CL=F`). Label = chart title. |
 | `ADJACENT_TICKERS` | Second-order sector groups (`defense_dual_use`, `power_energy_for_datacenters`, `semi_equipment_memory`). Discovery expands these over time. |
 | `INDEX_TICKERS` | Broad-market context — `^GSPC` (S&P 500). |
 | `MACRO_SERIES` | FRED series ids: `oil_wti`, `oil_brent`, `dollar_index` (enabled). Delete a line to disable a series. |
@@ -118,14 +134,15 @@ All live at the top of **`config.py`**. Nothing else needs editing for tuning.
 |----------|---------|
 | `DEEPSEEK_BASE_URL` | OpenAI-compatible endpoint. Change this + the model names to swap providers. |
 | `CLASSIFIER_MODEL` / `_MAX_TOKENS` / `_TEMPERATURE` | Cheap tagging model (`deepseek-chat`), 220 tok, temp 0. |
-| `SYNTHESIS_MODEL` / `_MAX_TOKENS` / `_TEMPERATURE` | Caption writer (`deepseek-chat`), 900 tok, temp 0.4. See the model note above for why not `deepseek-v4-pro`. |
-| `SYNTHESIS_FALLBACK_MODEL` / `_MAX_TOKENS` | Used if the primary returns empty (`deepseek-chat`, 900 tok). |
-| `DISCOVERY_MODEL` / `_MAX_TOKENS` / `_TEMPERATURE` | `deepseek-chat`, 1400 tok, temp 0.4. |
+| `ANALYST_MODEL` / `_MAX_TOKENS` / `_TEMPERATURE` | The reasoner (`deepseek-v4-pro`), 3000 tok, temp 0.3. See the model note above. |
+| `SYNTHESIS_MODEL` / `_MAX_TOKENS` / `_TEMPERATURE` | The writer (`deepseek-chat`), 900 tok, temp 0.4. |
+| `DISCOVERY_MODEL` / `_MAX_TOKENS` / `_TEMPERATURE` | Discovery/week-ahead writer (`deepseek-chat`), 1400 tok, temp 0.4. |
 
 ### Classifier
 | Constant | Meaning |
 |----------|---------|
-| `CATEGORIES` | Allowed tags: earnings / macro / filing / rating / M&A / politics / other. |
+| `CATEGORIES` | Allowed tags: earnings / macro / filing / rating / M&A / politics / **bubble_risk** / commodities / other. |
+| `WEEK_AHEAD_WEEKDAY` / `WEEK_AHEAD_EARNINGS_DAYS` / `WEEK_AHEAD_CHART_INSTRUMENTS` | Monday; 7-day earnings lookahead; which macro charts go in the album. |
 | `RELEVANCE_MIN_SCORE` | Minimum 0–5 score to clear the relevance bar (default 3). |
 | `MAX_ITEMS_TO_CLASSIFY_PER_RUN` | Cheap-model call cap per run (60). |
 | `MAX_POSTS_PER_RUN` | Max synthesized + published posts per run (4). |

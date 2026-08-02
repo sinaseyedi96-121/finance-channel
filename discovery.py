@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 
 import config
-from llm_client import chat
+from llm_client import chat, reason
 
 SYSTEM_PROMPT = f"""You are a research analyst producing a weekly "worth watching"
 note for a Telegram channel about AI-driven stocks and their second-order
@@ -62,13 +62,30 @@ def build_week_block(items: list[dict]) -> str:
     return json.dumps({"week_in_review": trimmed}, ensure_ascii=False, indent=2)
 
 
+ANALYST_SYSTEM = """You are a senior analyst. From the WEEK IN REVIEW (news/filings
+for AI names and adjacent sectors), reason about second-order beneficiaries — who
+supplies, powers, cools, or sells equipment to the AI buildout — and which sectors
+ride or are threatened by the same trend, including AI-bubble/crash risk. Output
+tight analytical notes on 3-5 candidate sectors/companies with the reasoning
+chain. Ground the reasoning in the provided items; do not invent figures."""
+
+
 def run_discovery(client, items: list[dict]) -> str:
-    user = "WEEK IN REVIEW:\n" + build_week_block(items)
+    block = "WEEK IN REVIEW:\n" + build_week_block(items)
+    # Pro reasons over the week; Chat writes the published note.
+    brief = reason(
+        client,
+        model=config.ANALYST_MODEL,
+        system=ANALYST_SYSTEM,
+        user=block,
+        max_tokens=config.ANALYST_MAX_TOKENS,
+        temperature=config.ANALYST_TEMPERATURE,
+    )
     return chat(
         client,
         model=config.DISCOVERY_MODEL,
         system=SYSTEM_PROMPT,
-        user=user,
+        user=block + "\n\nANALYST BRIEF:\n" + (brief or "(none)") + "\n\nNow write the note.",
         max_tokens=config.DISCOVERY_MAX_TOKENS,
         temperature=config.DISCOVERY_TEMPERATURE,
     )

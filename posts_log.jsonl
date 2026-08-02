@@ -6,3 +6,8 @@
 {"ts": "2026-08-02T07:58:15.425101Z", "mode": "auto", "ticker": "AMZN", "category": "earnings", "id": "141089503", "dry_run": false}
 {"ts": "2026-08-02T07:59:54.699100Z", "mode": "auto", "ticker": "MSFT", "category": "other", "id": "141087722", "dry_run": false}
 {"ts": "2026-08-02T08:01:00.686507Z", "mode": "auto", "ticker": "AMD", "category": "earnings", "id": "141087655", "dry_run": false}
+{"ts": "2026-08-02T10:42:55.341527Z", "mode": "week_ahead", "dry_run": false}
+{"ts": "2026-08-02T10:45:18.391999Z", "mode": "auto", "ticker": "PLTR", "category": "earnings", "id": "141092008", "dry_run": false}
+{"ts": "2026-08-02T10:45:50.667397Z", "mode": "auto", "ticker": "PLTR", "category": "bubble_risk", "id": "141087726", "dry_run": false}
+{"ts": "2026-08-02T10:46:21.578253Z", "mode": "auto", "ticker": "NVDA", "category": "rating", "id": "141092485", "dry_run": false}
+{"ts": "2026-08-02T10:46:54.932361Z", "mode": "auto", "ticker": "GOOGL", "category": "bubble_risk", "id": "141088357", "dry_run": false}

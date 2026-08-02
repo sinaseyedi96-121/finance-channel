@@ -8,6 +8,7 @@ TELEGRAM_CHANNEL env var. The bot must be an admin of the channel.
 
 from __future__ import annotations
 
+import json
 import os
 
 import requests
@@ -57,3 +58,30 @@ def post_photo(image_path: str, caption: str) -> dict:
         )
     resp.raise_for_status()
     return resp.json()["result"]
+
+
+def post_album(image_paths: list, caption: str = "") -> dict:
+    """Send up to 10 charts as one media-group album; caption (plain text) rides
+    on the first image."""
+    caption = caption[: config.TELEGRAM_CAPTION_LIMIT]
+    media = []
+    files = {}
+    try:
+        for i, path in enumerate(image_paths[:10]):
+            key = f"chart{i}"
+            item = {"type": "photo", "media": f"attach://{key}"}
+            if i == 0 and caption:
+                item["caption"] = caption
+            media.append(item)
+            files[key] = open(path, "rb")
+        resp = requests.post(
+            f"{_base_url()}/sendMediaGroup",
+            data={"chat_id": _chat_id(), "media": json.dumps(media)},
+            files=files,
+            timeout=60,
+        )
+        resp.raise_for_status()
+        return resp.json()["result"][0]
+    finally:
+        for fh in files.values():
+            fh.close()

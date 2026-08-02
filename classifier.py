@@ -17,25 +17,28 @@ import json
 import config
 from llm_client import chat
 
-SYSTEM_PROMPT = f"""You are a fast financial news triage classifier. For each item
-you receive, decide how relevant it is to a watchlist of AI-driven stocks and
-their second-order beneficiaries.
+SYSTEM_PROMPT = f"""You are a fast news triage classifier for a FINANCE / markets
+channel. We are in the AI boom, so AI stocks are the center of gravity and the
+most important names — but coverage is broad: the index, commodities, macro, and
+especially AI-BUBBLE / CRASH-RISK narratives (froth, valuations, concentration,
+capex sustainability, "the market will crash" analysis). Those are first-class,
+not noise.
 
-Watchlist core tickers: {", ".join(config.CORE_TICKERS)}
-Index: {", ".join(config.INDEX_TICKERS)}
+Core (AI) tickers: {", ".join(config.CORE_TICKERS)}
+Index + commodities: {", ".join(config.MACRO_INSTRUMENTS.keys())}
 Adjacent sectors: {", ".join(config.ADJACENT_TICKERS.keys())}
 Macro series tracked: {", ".join(config.MACRO_SERIES.keys())}
 
 Reply with ONLY a JSON object, no prose, with these keys:
-  "tickers":   array of watchlist tickers the item bears on (may be empty)
+  "tickers":   array of core tickers the item bears on (may be empty)
   "category":  one of {config.CATEGORIES}
-  "relevance": integer 0-5 (0 = irrelevant, 5 = clearly market-moving for the watchlist)
+  "relevance": integer 0-5 (0 = irrelevant, 5 = clearly market-moving / high-signal)
   "reason":    one short sentence
 
-STRICT RULE for general business/politics items: assign relevance >= {config.RELEVANCE_MIN_SCORE}
-ONLY if the item plausibly moves one of the core tickers, the index, or a tracked
-macro series (oil, dollar). General politics with no clear market channel gets
-relevance 0-1. Do not inflate scores."""
+Score >= {config.RELEVANCE_MIN_SCORE} when the item is high-signal for markets:
+a core-ticker mover, an index/commodity/macro mover, OR a substantive AI-bubble /
+crash-risk / market-correction analysis (tag those "bubble_risk"). General
+politics with no market channel gets 0-1. Do not inflate scores."""
 
 
 def build_user_prompt(item: dict) -> str:

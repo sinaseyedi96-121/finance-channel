@@ -31,6 +31,13 @@ class FormatTest(unittest.TestCase):
         cap = compliance.format_caption("x" * 5000)
         self.assertLessEqual(len(cap), config.TELEGRAM_CAPTION_LIMIT)
 
+    def test_caption_clips_at_boundary_not_midword(self):
+        body = "🚀 Headline line\n" + ("word " * 400)  # well over 1024
+        cap = compliance.format_caption(body)
+        self.assertLessEqual(len(cap), config.TELEGRAM_CAPTION_LIMIT)
+        self.assertTrue(cap.endswith("…"))
+        self.assertFalse(cap.rstrip("… ").endswith("wor"))  # not chopped mid-word
+
     def test_caption_strips_markdown_bold(self):
         cap = compliance.format_caption("🔥 **MSFT Surges** and __holds__ ## Header")
         self.assertNotIn("**", cap)
