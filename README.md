@@ -52,14 +52,23 @@ metrics) + `hidden_value.py` stage. State lives in committed JSON
 (`post_history.json`, `posts_log.jsonl`); ephemeral CI runners have no other memory
 between runs.
 
-**Four post types:**
-- **News** (3×/day) — chart + caption per relevant item (incl. bubble-risk items).
-- **Week Ahead** (Mondays) — forward preview (upcoming earnings + macro + bubble
-  watch) as an album of macro charts (S&P 500, Gold, Silver, Oil) + caption.
+**Eight post types:**
+- **News** (3×/day) — institutional chart + caption per relevant item: fundamentals
+  + valuation verdict + moat + multi-timeframe technicals + a conviction call, and
+  a ⚙️ entry/stop/target line when the setup is clean (bubble-risk items included).
+- **Earnings Deep-Dive** (daily check) — JPMorgan-style pre-earnings brief when a
+  core name reports soon: beat/miss history, expected move, bull/bear, setup.
+- **Head-to-Head** (Thursdays) — two rivals compared (AMD vs NVDA, ASML vs AMAT…),
+  a clear winner; album of both charts.
+- **AI Bubble Index** (Fridays) — proprietary 0-100 froth gauge (avg RSI + %>200EMA
+  + Bollinger position + weekly-uptrend breadth) as a meter + read.
+- **Conviction Scorecard** (Saturdays) — grades the last 30d of calls vs current
+  price: hit rate, avg return, best/worst, as a bar chart. The accountability engine.
+- **Week Ahead** (Mondays) — forward preview (earnings + macro + bubble watch) as
+  an album of macro charts (S&P 500, Gold, Silver, Oil).
 - **Hidden Value** (Wednesdays) — undervalued + critically-important-but-overlooked
-  companies (rare earths, cooling/power, uranium, grid, copper, water, semi tools).
-  Pro reasons over their **fundamentals** (P/E, PEG, P/B, margins, growth, analyst
-  upside) to find the strongest bull cases; text writeup + charts of the named picks.
+  essentials (rare earths, cooling/power, uranium, grid, copper, water, semi tools,
+  quantum, defense, irreplaceable moats) reasoned over their **fundamentals**.
 - **Discovery** (Sundays) — second-order beneficiaries "worth watching" note.
 
 **Grounding rule (non-negotiable):** the writer may only state figures present in
@@ -81,7 +90,7 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 
 cp .env.example .env          # fill in keys (DEEPSEEK_KEY is already reused from your setup)
-.venv/bin/python -m unittest discover -s tests -v     # 31 tests
+.venv/bin/python -m unittest discover -s tests -v     # 45 tests
 
 # Preview without posting (also the automatic mode until Telegram is configured):
 .venv/bin/python main.py --mode auto --dry-run
@@ -98,9 +107,13 @@ the channel is wired up.
 | `--mode auto` | Standard news cycle (default). |
 | `--mode discovery` | Weekly "worth watching" pass (gated to Sunday unless `--force`). |
 | `--mode week_ahead` | Monday week-ahead preview + macro chart album (gated to Monday unless `--force`). |
-| `--mode hidden_value` | Wednesday undervalued/overlooked-essentials post + charts (gated to Wednesday unless `--force`). |
+| `--mode hidden_value` | Wednesday undervalued/overlooked-essentials post + charts. |
+| `--mode head_to_head` | Thursday two-rival compare (rotates pairs). |
+| `--mode bubble_index` | Friday AI-froth gauge. |
+| `--mode scorecard` | Saturday call track-record report card. |
+| `--mode earnings_dd` | Daily — posts a pre-earnings brief when a core name reports soon. |
 | `--dry-run` | Run everything, print posts instead of publishing; **no state written**. |
-| `--force` | Ignore the weekday gate (discovery / week-ahead / hidden-value). |
+| `--force` | Ignore the weekday/coverage gate. |
 
 ---
 
