@@ -46,14 +46,20 @@ together, as intended:
 | 7 | Format | `compliance.py` | — |
 | 8 | Publish (photo / album / text) | `telegram_publisher.py` | — |
 
-Orchestrated by `main.py` (`--mode auto` / `discovery` / `week_ahead`). State
-lives in committed JSON (`post_history.json`, `posts_log.jsonl`); ephemeral CI
-runners have no other memory between runs.
+Orchestrated by `main.py` (`--mode auto` / `discovery` / `week_ahead` /
+`hidden_value`). Hidden Value adds an `ingest/fundamentals.py` (yfinance valuation
+metrics) + `hidden_value.py` stage. State lives in committed JSON
+(`post_history.json`, `posts_log.jsonl`); ephemeral CI runners have no other memory
+between runs.
 
-**Three post types:**
+**Four post types:**
 - **News** (3×/day) — chart + caption per relevant item (incl. bubble-risk items).
 - **Week Ahead** (Mondays) — forward preview (upcoming earnings + macro + bubble
   watch) as an album of macro charts (S&P 500, Gold, Silver, Oil) + caption.
+- **Hidden Value** (Wednesdays) — undervalued + critically-important-but-overlooked
+  companies (rare earths, cooling/power, uranium, grid, copper, water, semi tools).
+  Pro reasons over their **fundamentals** (P/E, PEG, P/B, margins, growth, analyst
+  upside) to find the strongest bull cases; text writeup + charts of the named picks.
 - **Discovery** (Sundays) — second-order beneficiaries "worth watching" note.
 
 **Grounding rule (non-negotiable):** the writer may only state figures present in
@@ -75,7 +81,7 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 
 cp .env.example .env          # fill in keys (DEEPSEEK_KEY is already reused from your setup)
-.venv/bin/python -m unittest discover -s tests -v     # 26 tests
+.venv/bin/python -m unittest discover -s tests -v     # 31 tests
 
 # Preview without posting (also the automatic mode until Telegram is configured):
 .venv/bin/python main.py --mode auto --dry-run
@@ -92,8 +98,9 @@ the channel is wired up.
 | `--mode auto` | Standard news cycle (default). |
 | `--mode discovery` | Weekly "worth watching" pass (gated to Sunday unless `--force`). |
 | `--mode week_ahead` | Monday week-ahead preview + macro chart album (gated to Monday unless `--force`). |
+| `--mode hidden_value` | Wednesday undervalued/overlooked-essentials post + charts (gated to Wednesday unless `--force`). |
 | `--dry-run` | Run everything, print posts instead of publishing; **no state written**. |
-| `--force` | Ignore the weekday gate (discovery / week-ahead). |
+| `--force` | Ignore the weekday gate (discovery / week-ahead / hidden-value). |
 
 ---
 
@@ -124,6 +131,8 @@ All live at the top of **`config.py`**. Nothing else needs editing for tuning.
 |----------|---------|
 | `CORE_TICKERS` | Primary AI names every post may cover: PLTR, NVDA, GOOGL, AMZN, MSFT, AMD, AVGO, SMCI, TSLA, META, MSTR. |
 | `MACRO_INSTRUMENTS` | Index + commodities that get their own charts: S&P 500 (`^GSPC`), Gold (`GC=F`), Silver (`SI=F`), Oil (`CL=F`). Label = chart title. |
+| `VALUE_UNIVERSE` | Overlooked-but-essential sectors the Hidden Value post reasons over: rare earths/critical minerals, data-center cooling & power, uranium/nuclear, grid, copper, water, semi equipment. |
+| `HIDDEN_VALUE_WEEKDAY` / `_MAX_NAMES` / `_CHART_TOP` / `_MIN_UPSIDE_PCT` | Wednesday; how many names to feature/chart; the analyst-upside threshold for the shortlist. |
 | `ADJACENT_TICKERS` | Second-order sector groups (`defense_dual_use`, `power_energy_for_datacenters`, `semi_equipment_memory`). Discovery expands these over time. |
 | `INDEX_TICKERS` | Broad-market context — `^GSPC` (S&P 500). |
 | `MACRO_SERIES` | FRED series ids: `oil_wti`, `oil_brent`, `dollar_index` (enabled). Delete a line to disable a series. |
