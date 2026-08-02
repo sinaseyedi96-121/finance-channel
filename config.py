@@ -279,6 +279,42 @@ WEEK_AHEAD_EARNINGS_DAYS = 7           # look this many days forward for earning
 WEEK_AHEAD_CHART_INSTRUMENTS = ["S&P 500", "Gold", "Silver", "Oil (WTI)"]
 
 # =====================================================================
+# CONVICTION SCORECARD  (weekly, Saturday) — accountability / track record
+# =====================================================================
+SCORECARD_WEEKDAY = 5                  # Saturday
+SCORECARD_LOOKBACK_DAYS = 30           # rolling window of calls to grade
+SCORECARD_MIN_AGE_DAYS = 3             # a call must be this old to be graded
+
+# =====================================================================
+# HEAD-TO-HEAD  (weekly, Thursday) — two rivals compared
+# =====================================================================
+HEAD_TO_HEAD_WEEKDAY = 3               # Thursday
+# Rotation of rival pairs; one pair per week (ISO week number picks the pair).
+HEAD_TO_HEAD_PAIRS = [
+    ("AMD", "NVDA"),
+    ("ASML", "AMAT"),
+    ("MSFT", "GOOGL"),
+    ("PLTR", "SNOW"),
+    ("TSM", "INTC"),
+    ("VRT", "ETN"),
+    ("CCJ", "LEU"),
+]
+
+# =====================================================================
+# EARNINGS DEEP-DIVE  (daily check) — pre-earnings brief for core names
+# =====================================================================
+# Runs daily; posts a deep-dive when a CORE ticker reports within this window.
+EARNINGS_DD_WINDOW_DAYS = 2
+EARNINGS_HISTORY_QUARTERS = 4          # beat/miss history to show
+
+# =====================================================================
+# AI BUBBLE INDEX  (weekly, Friday) — proprietary froth gauge
+# =====================================================================
+BUBBLE_INDEX_WEEKDAY = 4               # Friday
+# Names the froth gauge is computed across (the AI leadership).
+BUBBLE_INDEX_TICKERS = ["NVDA", "MSFT", "GOOGL", "AMZN", "META", "AMD", "AVGO", "PLTR"]
+
+# =====================================================================
 # HIDDEN VALUE  (weekly, Wednesday) — undervalued + overlooked essentials
 # =====================================================================
 HIDDEN_VALUE_WEEKDAY = 2               # Wednesday

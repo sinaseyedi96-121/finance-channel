@@ -270,6 +270,28 @@ def ma50_vs_ma200(df: pd.DataFrame) -> str:
     return "bullish_50>200" if now else "bearish_50<200"
 
 
+def trade_setup(price, support, resistance, mtf: dict | None = None) -> dict:
+    """A long-biased level plan (entry zone / stop / target) — but ONLY when the
+    setup is clean: reward:risk >= 1.5, price sits between support and resistance,
+    and the higher timeframe isn't clearly down. Returns {} when the setup is
+    muddy, so the writer simply omits the line (the 'Hybrid' directness choice)."""
+    if not (price and support and resistance) or not (support < price < resistance):
+        return {}
+    rr = (resistance - price) / (price - support)
+    if rr < 1.5:
+        return {}
+    if mtf and mtf.get("weekly") == "down" and mtf.get("monthly") == "down":
+        return {}
+    entry_low = round(min(support * 1.01, price), 2)
+    entry_high = round(price, 2)
+    return {
+        "entry_zone": [min(entry_low, entry_high), max(entry_low, entry_high)],
+        "stop": round(support * 0.98, 2),
+        "target": round(resistance, 2),
+        "reward_risk": round(rr, 2),
+    }
+
+
 def volume_read(df: pd.DataFrame) -> dict:
     """Recent volume trend + whether up-days or down-days carry the volume."""
     vol = df["Volume"].astype(float)
@@ -323,16 +345,18 @@ def summarize(symbol: str, df: pd.DataFrame) -> dict:
 
     support = levels.get("support")
     resistance = levels.get("resistance")
+    mtf = multi_timeframe(enriched)
+    last_r = _round(last)
     return {
         "symbol": symbol,
         "available": True,
         "as_of": str(df.index[-1].date()) if hasattr(df.index[-1], "date") else str(df.index[-1]),
-        "last_price": _round(last),
+        "last_price": last_r,
         "pct_change_1d": _round(pct_change),
         "rsi": latest_rsi,
         "rsi_state": rsi_state,
         "trend_daily": trend_state(enriched),
-        "trend_multi_timeframe": multi_timeframe(enriched),
+        "trend_multi_timeframe": mtf,
         **emas,
         "ma50_vs_ma200": ma50_vs_ma200(enriched),
         "macd_hist": _round(enriched["macd_hist"].iloc[-1], 4),
@@ -340,7 +364,8 @@ def summarize(symbol: str, df: pd.DataFrame) -> dict:
         "bb_lower": _round(enriched["bb_lower"].iloc[-1]),
         "support": support,
         "resistance": resistance,
-        "risk_reward": risk_reward(_round(last), support, resistance),
+        "risk_reward": risk_reward(last_r, support, resistance),
+        "trade_setup": trade_setup(last_r, support, resistance, mtf),
         "fib": fib_levels(enriched),
         "atr_pct": _round(enriched["atr_pct"].iloc[-1]),
         "volume": volume_read(enriched),

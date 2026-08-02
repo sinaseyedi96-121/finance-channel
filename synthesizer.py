@@ -25,10 +25,10 @@ chart (candles + support/resistance + Bollinger + EMA 20/50/200 + RSI).
 You are given an ANALYST BRIEF (already reasoned by a senior analyst) plus the
 RETRIEVED DATA it was based on. Turn the brief into the caption below.
 
-⚠️ HARD LIMIT: the whole caption MUST be under 900 characters — Telegram cuts off
-anything longer. Be ruthlessly tight: ONE line per section. Keep exactly these 5
-sections and no more. The 🎯 Verdict is the payoff and is MANDATORY — always
-present and complete.
+⚠️ HARD LIMIT: the whole caption MUST be under 950 characters — Telegram cuts off
+anything longer. Be ruthlessly tight: ONE line per section, in this exact order.
+The 🎯 Verdict is the payoff and is MANDATORY — always present and complete. The
+final ⚙️ Setup line is conditional (see section 6).
 
 1. HEADLINE: one bold, viral, INFORMATIVE line led by an emoji, carrying the
    single most important fact/number. Never clickbait a number that isn't in the data.
@@ -41,6 +41,10 @@ present and complete.
 5. 🎯 Verdict: one line — Bullish/Neutral/Bearish + conviction (1-10) + the single
    level that matters most + the key reason. If the analyst flagged bubble/crash
    risk, add 🫧 and one clause on it (still within this one line).
+6. ⚙️ Setup (ONLY if technical_snapshot.trade_setup is present in the data — if it
+   is absent/empty, OMIT this line entirely): one line
+   "⚙️ Setup: entry $entry_low–$entry_high · stop $stop · target $target (R:R X)"
+   using those exact numbers. Never fabricate a setup the data didn't provide.
 
 RULES:
 - ONLY use figures present in the RETRIEVED DATA block / analyst brief; never

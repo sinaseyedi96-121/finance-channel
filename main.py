@@ -23,18 +23,22 @@ import re
 from dotenv import load_dotenv
 
 import analyst
+import bubble_index as bubble_index_stage
 import chart_generator
 import compliance
 import config
 import discovery as discovery_stage
+import earnings_dd as earnings_dd_stage
+import head_to_head as head_to_head_stage
 import hidden_value as hidden_value_stage
+import scorecard as scorecard_stage
 import state_manager as state
 import synthesizer
 import technicals
 import week_ahead as week_ahead_stage
 from ingest import (
-    business_rss, earnings_calendar, eia_energy, finnhub_news, fred_macro,
-    fundamentals, prices, sec_edgar,
+    business_rss, earnings_calendar, earnings_history, eia_energy, finnhub_news,
+    fred_macro, fundamentals, prices, sec_edgar,
 )
 from llm_client import get_client
 
@@ -171,6 +175,7 @@ def run_auto(dry_run: bool) -> None:
             continue
 
         # Ticker item with price data -> chart + caption. Otherwise text post.
+        caption = None
         try:
             if df is not None and tech and tech.get("available"):
                 caption = compliance.format_caption(body)
@@ -205,6 +210,20 @@ def run_auto(dry_run: bool) -> None:
                 "dry_run": dry_run,
             }
         )
+        # Log the call (lean + conviction) for the weekly scorecard.
+        if caption and ticker and tech and tech.get("available"):
+            lean, conviction = scorecard_stage.parse_verdict(caption)
+            if lean:
+                setup = tech.get("trade_setup") or {}
+                state.add_call(current_state, {
+                    "date": dt.date.today().isoformat(),
+                    "ticker": ticker,
+                    "lean": lean,
+                    "conviction": conviction,
+                    "price": tech.get("last_price"),
+                    "target": setup.get("target") or tech.get("resistance"),
+                    "stop": setup.get("stop"),
+                })
 
     print(f"[auto] {'previewed' if dry_run else 'published'} {published} post(s)")
     if not dry_run:
@@ -385,14 +404,178 @@ def run_hidden_value(dry_run: bool, force: bool) -> None:
     print("[hidden_value] done" + (" (dry-run preview)" if dry_run else ""))
 
 
+def _weekly_gate(current_state, weekday: int, marker: str, name: str, force: bool):
+    """Shared weekday + once-per-day gate for the weekly posts. Returns today's
+    date if the run should proceed, else None."""
+    today = dt.date.today()
+    if not force and today.weekday() != weekday:
+        print(f"[{name}] not scheduled today (weekday {today.weekday()} != {weekday})")
+        return None
+    if not force and state.get_marker(current_state, marker) == today.isoformat():
+        print(f"[{name}] already ran today")
+        return None
+    return today
+
+
+def run_scorecard(dry_run: bool, force: bool) -> None:
+    """Saturday Conviction Scorecard: grade the last month of calls + report card."""
+    current_state = state.load_state()
+    today = _weekly_gate(current_state, config.SCORECARD_WEEKDAY, "last_scorecard", "scorecard", force)
+    if today is None:
+        return
+    calls = state.get_calls(current_state)
+    tickers = sorted({c.get("ticker") for c in calls if c.get("ticker")})
+    if not tickers:
+        print("[scorecard] no calls logged yet; skipping")
+        return
+    frames = prices.fetch_ohlcv(tickers)
+    price_map = {t: float(df["Close"].iloc[-1]) for t, df in frames.items() if df is not None and not df.empty}
+    stats = scorecard_stage.grade(calls, price_map, today)
+    if not stats.get("n"):
+        print("[scorecard] no matured calls to grade; skipping")
+        return
+    client = get_client()
+    text = compliance.format_message(scorecard_stage.run_scorecard(client, stats))
+    chart = scorecard_stage.scorecard_chart(stats)
+    if dry_run:
+        print(f"\n----- DRY RUN SCORECARD (chart: {chart}) -----\n{text}\n-----\n")
+    else:
+        import telegram_publisher
+        if chart:
+            telegram_publisher.post_photo(chart, text[: config.TELEGRAM_CAPTION_LIMIT])
+        else:
+            telegram_publisher.post_text(text)
+        state.set_marker(current_state, "last_scorecard", today.isoformat())
+        state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "scorecard"})
+        state.save_state(current_state)
+    print("[scorecard] done" + (" (dry-run preview)" if dry_run else ""))
+
+
+def run_head_to_head(dry_run: bool, force: bool) -> None:
+    """Thursday Head-to-Head: two rivals compared, both charts + verdict."""
+    current_state = state.load_state()
+    today = _weekly_gate(current_state, config.HEAD_TO_HEAD_WEEKDAY, "last_head_to_head", "head_to_head", force)
+    if today is None:
+        return
+    a, b = head_to_head_stage.pick_pair(today)
+    frames = prices.fetch_ohlcv([a, b])
+    sides = []
+    for t in (a, b):
+        df = frames.get(t)
+        sides.append({"ticker": t,
+                      "tech": technicals.summarize(t, df) if df is not None else None,
+                      "fund": (fundamentals.fetch([t]) or [None])[0]})
+    client = get_client()
+    body = head_to_head_stage.run_head_to_head(client, sides[0], sides[1])
+    if not body.strip():
+        print("[head_to_head] empty body; skipping")
+        return
+    caption = compliance.format_caption(body)
+    charts = [p for p in (_chart_for(a, frames), _chart_for(b, frames)) if p]
+    if dry_run:
+        print(f"\n----- DRY RUN HEAD-TO-HEAD {a} vs {b} (charts: {charts}) -----\n{caption}\n-----\n")
+    else:
+        import telegram_publisher
+        if charts:
+            telegram_publisher.post_album(charts, caption)
+        else:
+            telegram_publisher.post_text(caption)
+        state.set_marker(current_state, "last_head_to_head", today.isoformat())
+        state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "head_to_head",
+                               "pair": f"{a}/{b}"})
+        state.save_state(current_state)
+    print(f"[head_to_head] done ({a} vs {b})" + (" (dry-run preview)" if dry_run else ""))
+
+
+def run_earnings_dd(dry_run: bool, force: bool) -> None:
+    """Daily check: post an earnings deep-dive when a core name reports soon."""
+    current_state = state.load_state()
+    upcoming = earnings_calendar.fetch(config.CORE_TICKERS, days=config.EARNINGS_DD_WINDOW_DAYS)
+    if not upcoming:
+        print("[earnings_dd] no core names reporting in window")
+        return
+    done = set(state.get_marker(current_state, "earnings_dd_done") or [])
+    entry = next((e for e in upcoming if f"{e['ticker']}:{e['date']}" not in done), None)
+    if entry is None and not force:
+        print("[earnings_dd] all upcoming already covered")
+        return
+    entry = entry or upcoming[0]
+    ticker = entry["ticker"]
+    frames = prices.fetch_ohlcv([ticker])
+    df = frames.get(ticker)
+    tech = technicals.summarize(ticker, df) if df is not None else None
+    fund = (fundamentals.fetch([ticker]) or [None])[0]
+    history = earnings_history.fetch(ticker)
+    client = get_client()
+    body = earnings_dd_stage.run_earnings_dd(client, ticker, entry, history, fund, tech)
+    if not body.strip():
+        print("[earnings_dd] empty body; skipping")
+        return
+    caption = compliance.format_caption(body)
+    chart = _chart_for(ticker, frames)
+    if dry_run:
+        print(f"\n----- DRY RUN EARNINGS DD {ticker} (chart: {chart}) -----\n{caption}\n-----\n")
+    else:
+        import telegram_publisher
+        if chart:
+            telegram_publisher.post_photo(chart, caption)
+        else:
+            telegram_publisher.post_text(caption)
+        done.add(f"{ticker}:{entry['date']}")
+        state.set_marker(current_state, "earnings_dd_done", sorted(done)[-50:])
+        state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "earnings_dd",
+                               "ticker": ticker})
+        state.save_state(current_state)
+    print(f"[earnings_dd] done ({ticker})" + (" (dry-run preview)" if dry_run else ""))
+
+
+def run_bubble_index(dry_run: bool, force: bool) -> None:
+    """Friday AI Bubble Index: proprietary froth gauge + read."""
+    current_state = state.load_state()
+    today = _weekly_gate(current_state, config.BUBBLE_INDEX_WEEKDAY, "last_bubble_index", "bubble_index", force)
+    if today is None:
+        return
+    frames = prices.fetch_ohlcv(config.BUBBLE_INDEX_TICKERS)
+    tech_map = {t: technicals.summarize(t, frames[t]) for t in config.BUBBLE_INDEX_TICKERS if t in frames}
+    index = bubble_index_stage.compute_index(tech_map)
+    if not index:
+        print("[bubble_index] no data; skipping")
+        return
+    client = get_client()
+    text = compliance.format_message(bubble_index_stage.run_bubble_index(client, index, tech_map))
+    gauge = bubble_index_stage.gauge_chart(index)
+    if dry_run:
+        print(f"\n----- DRY RUN BUBBLE INDEX {index['score']}/100 {index['label']} (chart: {gauge}) -----\n{text}\n-----\n")
+    else:
+        import telegram_publisher
+        if gauge:
+            telegram_publisher.post_photo(gauge, text[: config.TELEGRAM_CAPTION_LIMIT])
+        else:
+            telegram_publisher.post_text(text)
+        state.set_marker(current_state, "last_bubble_index", today.isoformat())
+        state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "bubble_index",
+                               "score": index["score"]})
+        state.save_state(current_state)
+    print(f"[bubble_index] done ({index['score']}/100)" + (" (dry-run preview)" if dry_run else ""))
+
+
 # ---- entrypoint -------------------------------------------------------
+
+_MODES = {
+    "auto": lambda d, f: run_auto(d),
+    "discovery": run_discovery,
+    "week_ahead": run_week_ahead,
+    "hidden_value": run_hidden_value,
+    "scorecard": run_scorecard,
+    "head_to_head": run_head_to_head,
+    "earnings_dd": run_earnings_dd,
+    "bubble_index": run_bubble_index,
+}
+
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--mode", default="auto",
-        choices=["auto", "discovery", "week_ahead", "hidden_value"],
-    )
+    parser.add_argument("--mode", default="auto", choices=list(_MODES))
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
@@ -404,14 +587,7 @@ def main() -> None:
     if dry_run and not args.dry_run:
         print("[main] TELEGRAM_TOKEN/TELEGRAM_CHANNEL unset — running in dry-run mode")
 
-    if args.mode == "discovery":
-        run_discovery(dry_run, args.force)
-    elif args.mode == "week_ahead":
-        run_week_ahead(dry_run, args.force)
-    elif args.mode == "hidden_value":
-        run_hidden_value(dry_run, args.force)
-    else:
-        run_auto(dry_run)
+    _MODES[args.mode](dry_run, args.force)
 
 
 if __name__ == "__main__":

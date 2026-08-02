@@ -1,0 +1,41 @@
+name: AI Bubble Index (weekly)
+on:
+  schedule:
+    - cron: '0 18 * * 5'
+  workflow_dispatch:
+    inputs:
+      dry_run: { description: Run but do not publish, type: boolean, required: false, default: false }
+      force:   { description: Ignore the weekday gate, type: boolean, required: false, default: false }
+permissions:
+  contents: write
+concurrency:
+  group: finance-bubble-index
+  cancel-in-progress: false
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run bubble_index
+        env:
+          DEEPSEEK_KEY: ${{ secrets.DEEPSEEK_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
+          FINNHUB_KEY: ${{ secrets.FINNHUB_KEY }}
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+          DRY_RUN_FLAG: ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
+          FORCE_FLAG: ${{ github.event.inputs.force == 'true' && '--force' || '' }}
+        run: python main.py --mode bubble_index ${DRY_RUN_FLAG} ${FORCE_FLAG}
+      - name: Commit updated state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add post_history.json posts_log.jsonl
+          if git diff --staged --quiet; then echo "No state changes"; exit 0; fi
+          git commit -m "Update bubble_index state [skip ci]"
+          git push || (git fetch origin main && git rebase origin/main && git push)

@@ -88,6 +88,21 @@ def set_marker(state: dict, key: str, date_iso: str) -> None:
     state[key] = date_iso
 
 
+# ---- call log (for the conviction scorecard) -------------------------
+
+def add_call(state: dict, call: dict) -> None:
+    """Record a published call (ticker, lean, conviction, price, levels) so the
+    weekly scorecard can grade how it played out."""
+    calls = state.setdefault("calls", [])
+    calls.append(call)
+    if len(calls) > 500:
+        del calls[:-500]
+
+
+def get_calls(state: dict) -> list:
+    return state.get("calls", [])
+
+
 # ---- published-post log ----------------------------------------------
 
 def append_post_log(entry: dict) -> None:
