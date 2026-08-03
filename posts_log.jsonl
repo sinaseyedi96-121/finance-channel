@@ -15,3 +15,7 @@
 {"ts": "2026-08-02T16:59:11.303044Z", "mode": "bubble_index", "score": 52.0}
 {"ts": "2026-08-02T17:53:59.728715Z", "mode": "discovery", "dry_run": false}
 {"ts": "2026-08-03T14:58:11.422495Z", "mode": "week_ahead", "dry_run": false}
+{"ts": "2026-08-03T15:29:03.282721Z", "mode": "auto", "ticker": null, "category": "commodities", "id": "DCOILWTICO:2026-07-27", "dry_run": false}
+{"ts": "2026-08-03T15:29:40.270016Z", "mode": "auto", "ticker": null, "category": "commodities", "id": "DCOILBRENTEU:2026-07-27", "dry_run": false}
+{"ts": "2026-08-03T15:30:18.276047Z", "mode": "auto", "ticker": "AMZN", "category": "bubble_risk", "id": "141098791", "dry_run": false}
+{"ts": "2026-08-03T15:31:03.081594Z", "mode": "auto", "ticker": "AMZN", "category": "bubble_risk", "id": "141098756", "dry_run": false}

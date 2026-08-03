@@ -1,4 +1,24 @@
 {
+  "calls": [
+    {
+      "conviction": null,
+      "date": "2026-08-03",
+      "lean": "neutral",
+      "price": 285.72,
+      "stop": null,
+      "target": 287.16,
+      "ticker": "AMZN"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-03",
+      "lean": "neutral",
+      "price": 285.72,
+      "stop": null,
+      "target": 287.16,
+      "ticker": "AMZN"
+    }
+  ],
   "last_bubble_index": "2026-08-02",
   "last_discovery": "2026-08-02",
   "last_hidden_value": "2026-08-02",
@@ -15,6 +35,10 @@
     "finnhub:141092008",
     "finnhub:141087726",
     "finnhub:141092485",
-    "finnhub:141088357"
+    "finnhub:141088357",
+    "fred:DCOILWTICO:2026-07-27",
+    "fred:DCOILBRENTEU:2026-07-27",
+    "finnhub:141098791",
+    "finnhub:141098756"
   ]
 }
