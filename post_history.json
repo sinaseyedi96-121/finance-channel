@@ -53,6 +53,42 @@
       "stop": null,
       "target": 489.75,
       "ticker": "MSFT"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-03",
+      "lean": "bullish",
+      "price": 392.23,
+      "stop": null,
+      "target": 400.79,
+      "ticker": "AVGO"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-03",
+      "lean": "bullish",
+      "price": 590.24,
+      "stop": null,
+      "target": 669.31,
+      "ticker": "META"
+    },
+    {
+      "conviction": 8,
+      "date": "2026-08-03",
+      "lean": "bearish",
+      "price": 94.86,
+      "stop": null,
+      "target": 101.0,
+      "ticker": "MSTR"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-03",
+      "lean": "bearish",
+      "price": 322.08,
+      "stop": null,
+      "target": 413.01,
+      "ticker": "TSLA"
     }
   ],
   "last_bubble_index": "2026-08-02",
@@ -102,6 +138,10 @@
     "finnhub:141098993",
     "finnhub:141098746",
     "finnhub:141100581",
-    "finnhub:141098747"
+    "finnhub:141098747",
+    "finnhub:141100659",
+    "finnhub:141100583",
+    "finnhub:141101346",
+    "finnhub:141100733"
   ]
 }
