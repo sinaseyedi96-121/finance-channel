@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 
 import config
+import reviewer
 from llm_client import reason
 
 SYSTEM_PROMPT = """You are a senior sell-side equity analyst running a desk that
@@ -76,7 +77,8 @@ def build_data_block(item: dict, tech: dict | None, fund: dict | None = None,
 
 def analyze(client, item: dict, tech: dict | None, fund: dict | None = None,
             macro: list | None = None) -> str:
-    user = "RETRIEVED DATA:\n" + build_data_block(item, tech, fund, macro)
+    user = ("RETRIEVED DATA:\n" + build_data_block(item, tech, fund, macro)
+            + reviewer.notes_block())
     return reason(
         client,
         model=config.ANALYST_MODEL,

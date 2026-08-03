@@ -1,0 +1,73 @@
+name: Channel Review
+
+on:
+  schedule:
+    # Daily, after the last posting slot (after-close news run is 20:15 UTC;
+    # weekend weeklies post earlier). The reviewer reads everything published,
+    # then refreshes editorial_notes.json for the next day's prompts.
+    - cron: '30 23 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Run the review but do not write notes
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ai-stocks-publisher
+  cancel-in-progress: false
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Test pipeline
+        run: python -m unittest discover -s tests -v
+
+      - name: Run daily review
+        env:
+          DEEPSEEK_KEY: ${{ secrets.DEEPSEEK_KEY }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
+          DRY_RUN_FLAG: ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
+        run: python main.py --mode review ${DRY_RUN_FLAG}
+
+      - name: Commit review + editorial notes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add post_history.json posts_log.jsonl editorial_notes.json reviews/
+          if git diff --staged --quiet; then
+            echo "No state changes"
+            exit 0
+          fi
+          git commit -m "Daily channel review [skip ci]"
+
+          for attempt in 1 2 3 4 5; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push rejected (attempt $attempt), rebasing onto latest main..."
+            git fetch origin main
+            if ! git rebase origin/main; then
+              git checkout --ours -- post_history.json posts_log.jsonl editorial_notes.json reviews/
+              git add post_history.json posts_log.jsonl editorial_notes.json reviews/
+              git rebase --continue
+            fi
+            sleep $((RANDOM % 6 + 2))
+          done
+          echo "Failed to push after retries" >&2
+          exit 1

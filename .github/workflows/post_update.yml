@@ -51,6 +51,15 @@ jobs:
           DRY_RUN_FLAG: ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
         run: python main.py --mode auto ${DRY_RUN_FLAG}
 
+      # Event-driven leaderboard: fetches current caps and posts ONLY when the
+      # top-20 ordering changed since the stored ranking (max once/day).
+      - name: Market-cap ranking check
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
+          DRY_RUN_FLAG: ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}
+        run: python main.py --mode market_cap ${DRY_RUN_FLAG}
+
       - name: Commit updated state
         run: |
           git config user.name "github-actions[bot]"

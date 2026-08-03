@@ -42,9 +42,11 @@ together, as intended:
 | 3 | Technicals + S/R levels | `technicals.py` | — (pandas, no `pandas_ta`) |
 | 4 | Analyze (reason) | `analyst.py` | `deepseek-v4-pro` |
 | 5 | Caption / post (write) | `synthesizer.py` · `discovery.py` · `week_ahead.py` | `deepseek-chat` |
+| 5.5 | Grounding gate (numbers must trace to data) | `grounding.py` | — (mechanical) |
 | 6 | Chart render | `chart_generator.py` | — (mplfinance, PT Serif) |
 | 7 | Format | `compliance.py` | — |
 | 8 | Publish (photo / album / text) | `telegram_publisher.py` | — |
+| 9 | Daily review → editorial notes | `reviewer.py` | `deepseek-v4-pro` + `deepseek-chat` |
 
 Orchestrated by `main.py` (`--mode auto` / `discovery` / `week_ahead` /
 `hidden_value`). Hidden Value adds an `ingest/fundamentals.py` (yfinance valuation
@@ -52,7 +54,7 @@ metrics) + `hidden_value.py` stage. State lives in committed JSON
 (`post_history.json`, `posts_log.jsonl`); ephemeral CI runners have no other memory
 between runs.
 
-**Eight post types:**
+**Nine post types:**
 - **News** (3×/day) — institutional chart + caption per relevant item: fundamentals
   + valuation verdict + moat + multi-timeframe technicals + a conviction call, and
   a ⚙️ entry/stop/target line when the setup is clean (bubble-risk items included).
@@ -70,11 +72,40 @@ between runs.
   essentials (rare earths, cooling/power, uranium, grid, copper, water, semi tools,
   quantum, defense, irreplaceable moats) reasoned over their **fundamentals**.
 - **Discovery** (Sundays) — second-order beneficiaries "worth watching" note.
+- **Market-Cap Top 20** (event-driven) — leaderboard chart of the biggest
+  companies, posted **only when the top-20 ordering changes** (rank swaps, new
+  entries, drop-outs — `market_cap.py`). Caption is fully mechanical: every
+  number comes straight from the fetched caps, no LLM involved.
 
 **Grounding rule (non-negotiable):** the writer may only state figures present in
 the retrieved-data block — and those technical numbers are the *same ones drawn
 on the chart*, so caption and chart always agree. The analyst brief interprets;
 it does not license new numbers.
+
+**Mechanical grounding GATE (`grounding.py`):** the rule above is now *enforced*,
+not just prompted. Every number in a draft caption is extracted and traced back
+to the retrieved data (news text, technicals, fundamentals, macro) — tolerant of
+formatting ($ , % , K/M/B/T suffixes, rounding to the caption's own precision),
+strict about substance. News posts get the **hard gate**: one retry with the
+offending figures named, then the post is skipped. Weekly composite posts get a
+warn-only check whose flags land in the posts log for the reviewer.
+
+### The quality loop (self-improving channel)
+
+- **Diversity gate** — at most `MAX_POSTS_PER_TICKER_PER_DAY` (=1) news posts per
+  ticker per UTC day, across all runs (no more two-AMZN days). Checked before
+  the model calls, so skipped items cost nothing.
+- **Posts log = the channel's own copy of its content.** Every published post now
+  logs its full caption + chart metadata (S/R levels, touch counts, lookback)
+  to `posts_log.jsonl` — the Bot API can't fetch channel history, so the
+  pipeline records at the source.
+- **Review agent (`reviewer.py`, daily 23:30 UTC via `review.yml`)** — the
+  editor-in-chief. Deterministic checks (same-ticker repeats, category streaks,
+  weak S/R levels drawn, grounding flags, captions near the length limit,
+  missing verdicts) + a Pro critique of everything published, distilled by Chat
+  into ≤5 directives saved to `editorial_notes.json`. The analyst and writer
+  prompts load those directives on every subsequent post — yesterday's review
+  steers today's content. Full dated reviews are committed under `reviews/`.
 
 **Format layer (`compliance.py`):** no disclaimer and no linter by default
 (`DISCLAIMER_ENABLED` / `LINT_ENABLED` are `False`; flip on to reintroduce
@@ -112,6 +143,8 @@ the channel is wired up.
 | `--mode bubble_index` | Friday AI-froth gauge. |
 | `--mode scorecard` | Saturday call track-record report card. |
 | `--mode earnings_dd` | Daily — posts a pre-earnings brief when a core name reports soon. |
+| `--mode market_cap` | Top-20 leaderboard — posts only when the ordering changed. |
+| `--mode review` | Daily editor-in-chief pass — refreshes `editorial_notes.json`. |
 | `--dry-run` | Run everything, print posts instead of publishing; **no state written**. |
 | `--force` | Ignore the weekday/coverage gate. |
 
@@ -249,8 +282,13 @@ No disclaimer footer. Discovery posts are text with a `🔭 Worth Watching` head
   +1h during EST if you want to hold the ET slot exactly. Runs tests, then the
   pipeline, then commits updated state with a rebase-retry push loop.
 - **`.github/workflows/discovery.yml`** — **weekly, Sunday ~13:00 ET** discovery pass.
+- **`.github/workflows/review.yml`** — **daily 23:30 UTC** editor-in-chief pass:
+  reviews everything published, commits the dated review + refreshed
+  `editorial_notes.json` that steers the next day's prompts.
+- `post_update.yml` also runs the **market-cap ranking check** after each news
+  cycle (posts only on a top-20 reshuffle, max once/day).
 
-Both support `workflow_dispatch` with a `dry_run` toggle (and `force` for discovery).
+All support `workflow_dispatch` with a `dry_run` toggle (and `force` for discovery).
 
 **Add these repo Secrets before enabling:** `DEEPSEEK_KEY`, `TELEGRAM_TOKEN`,
 `TELEGRAM_CHANNEL`, and optionally `FINNHUB_KEY`, `FRED_API_KEY`, `EIA_API_KEY`,

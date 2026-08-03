@@ -143,6 +143,11 @@ RELEVANCE_MIN_SCORE = 3
 MAX_ITEMS_TO_CLASSIFY_PER_RUN = 60     # cheap-model calls
 MAX_POSTS_PER_RUN = 4                  # deepseek-v4-pro synthesis + published posts
 
+# Diversity gate: at most this many news posts about the SAME ticker per UTC day
+# (counted across all runs via posts_log.jsonl). Stops the "two AMZN posts in a
+# row" pattern — a second story on an already-covered name waits for tomorrow.
+MAX_POSTS_PER_TICKER_PER_DAY = 1
+
 # Business-politics items are only allowed through if the classifier judges
 # they plausibly move a CORE/INDEX ticker or a macro series. General politics
 # is discarded here (see classifier.py system prompt).
@@ -183,7 +188,10 @@ LEVEL_CLUSTER_ATR_MULTIPLIER = 0.40    # merge nearby pivots into one level
 
 # ---- Chart (crypto-style technical image) ----
 CHART_DIR = "charts"
-CHART_DISPLAY_CANDLES = 120            # compute on full history, render recent window
+# Render the SAME window the S/R levels are computed over (LEVEL_LOOKBACK), so
+# every pivot behind a drawn line is visible and the level reads as earned.
+# (Was 120 — the reviewer flagged that the tighter crop made levels look arbitrary.)
+CHART_DISPLAY_CANDLES = 180
 CHART_DPI = 160
 
 # =====================================================================
@@ -342,6 +350,46 @@ HIDDEN_VALUE_CHART_TOP = 5            # max charts in the album (the names the p
 # Names whose analyst mean target sits at least this far above price are treated
 # as showing a clear "fundamental value > current price" signal in the shortlist.
 HIDDEN_VALUE_MIN_UPSIDE_PCT = 15.0
+
+# =====================================================================
+# GROUNDING GATE  (stage 5.5 — mechanical, grounding.py)
+# =====================================================================
+# Every number in a draft caption must be traceable to the retrieved data
+# (news text, technicals, fundamentals, macro). One retry with the offending
+# figures named; still failing -> the post is skipped, never published.
+GROUNDING_ENABLED = True
+GROUNDING_REL_TOL = 0.015              # 1.5% relative slack for rounding drift
+GROUNDING_SMALL_INT_MAX = 10           # bare ints <= this are always allowed
+                                       # (ranks, counts, conviction 1-10)
+
+# =====================================================================
+# MARKET CAP RANKING  (event-driven) — top-20 leaderboard, posts ONLY on change
+# =====================================================================
+# Checked after each news run; the chart is only posted when the top-20
+# ORDERING actually changed since the last stored ranking (a static leaderboard
+# is noise). Universe is deliberately wider than 20 so entries/exits register.
+MARKET_CAP_UNIVERSE = [
+    "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "AVGO", "TSLA",
+    "BRK-B", "TSM", "LLY", "WMT", "JPM", "V", "MA", "XOM", "UNH",
+    "ORCL", "COST", "PG", "HD", "JNJ", "NFLX", "BAC", "CRM", "ASML",
+    "AMD", "KO", "CVX", "PLTR",
+]
+MARKET_CAP_TOP_N = 20
+
+# =====================================================================
+# REVIEW AGENT  (daily, reviewer.py) — the channel's editor-in-chief loop
+# =====================================================================
+# Reads the posts log (full captions + chart metadata, i.e. what the channel
+# actually published), runs deterministic checks, has Pro critique the output,
+# and writes EDITORIAL_NOTES_FILE — short directives the analyst and writer
+# prompts obey on every subsequent post. Full reviews land in REVIEWS_DIR.
+REVIEW_LOOKBACK_DAYS = 3               # posts window the reviewer considers
+REVIEW_MAX_DIRECTIVES = 5              # directives carried into future prompts
+REVIEW_NOTES_MAX_AGE_DAYS = 7          # stale notes are ignored, not obeyed
+REVIEWS_DIR = "reviews"
+EDITORIAL_NOTES_FILE = "editorial_notes.json"
+REVIEW_MAX_TOKENS = 3000               # Pro critique budget
+REVIEW_TEMPERATURE = 0.3
 
 # =====================================================================
 # PATHS  (committed JSON state — the only memory between ephemeral CI runs)

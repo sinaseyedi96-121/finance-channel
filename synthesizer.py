@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 
 import config
+import reviewer
 from llm_client import chat
 
 SYSTEM_PROMPT = f"""You write punchy, emoji-rich Telegram captions for a finance
@@ -70,11 +71,16 @@ def build_data_block(item: dict, tech: dict | None) -> str:
     return json.dumps(block, ensure_ascii=False, indent=2)
 
 
-def synthesize(client, item: dict, tech: dict | None, analysis: str = "") -> str:
+def synthesize(client, item: dict, tech: dict | None, analysis: str = "",
+               feedback: str = "") -> str:
+    """`feedback` carries the grounding gate's rejection note on the one retry
+    (grounding.retry_feedback); empty on the first attempt."""
     user = (
         "RETRIEVED DATA:\n" + build_data_block(item, tech)
         + "\n\nANALYST BRIEF (reason from this, keep numbers grounded to the data):\n"
         + (analysis or "(no brief provided — write from the data block)")
+        + reviewer.notes_block()
+        + feedback
         + "\n\nNow write the caption."
     )
     return chat(

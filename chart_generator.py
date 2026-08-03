@@ -121,11 +121,16 @@ def generate_chart(df, ticker: str, levels: dict, display_name: str | None = Non
         mpf.make_addplot(display["ema_long"], color=EMA_LONG_C, width=1.2, alpha=0.9),
     ]
 
+    # A level is only drawn SOLID when enough pivots actually touched it; a
+    # single-touch fallback (range high/low) renders dashed and thinner so the
+    # chart never oversells an unvalidated line as real resistance/support.
+    solid_support = levels.get("support_touches", 1) >= config.MIN_LEVEL_TOUCHES
+    solid_resistance = levels.get("resistance_touches", 1) >= config.MIN_LEVEL_TOUCHES
     hlines = {
         "hlines": [levels["support"], levels["resistance"]],
         "colors": [SUPPORT, RESISTANCE],
-        "linestyle": ["-", "-"],
-        "linewidths": [1.15, 1.15],
+        "linestyle": ["-" if solid_support else "--", "-" if solid_resistance else "--"],
+        "linewidths": [1.4 if solid_support else 0.9, 1.4 if solid_resistance else 0.9],
         "alpha": 0.9,
     }
 
@@ -167,17 +172,24 @@ def generate_chart(df, ticker: str, levels: dict, display_name: str | None = Non
         color=BB, alpha=0.055, zorder=0,
     )
 
+    # Zone shading is reserved for validated levels — shading a weak line would
+    # visually promote it back to "real".
     zone_width = float(levels.get("zone_width", 0))
-    if zone_width:
+    if zone_width and solid_support:
         price_ax.axhspan(levels["support"] - zone_width, levels["support"] + zone_width,
                          color=SUPPORT, alpha=0.055, zorder=0)
+    if zone_width and solid_resistance:
         price_ax.axhspan(levels["resistance"] - zone_width, levels["resistance"] + zone_width,
                          color=RESISTANCE, alpha=0.055, zorder=0)
 
     last = display.iloc[-1]
     current_price = float(last["Close"])
-    _price_label(price_ax, levels["support"], "SUPPORT", SUPPORT)
-    _price_label(price_ax, levels["resistance"], "RESISTANCE", RESISTANCE)
+    sup_label = (f"SUPPORT x{levels.get('support_touches', 1)}"
+                 if solid_support else "SUPPORT (weak)")
+    res_label = (f"RESISTANCE x{levels.get('resistance_touches', 1)}"
+                 if solid_resistance else "RESISTANCE (weak)")
+    _price_label(price_ax, levels["support"], sup_label, SUPPORT)
+    _price_label(price_ax, levels["resistance"], res_label, RESISTANCE)
 
     rsi_values = display["rsi"].to_numpy(dtype=float)
     rsi_ax.set_ylim(0, 100)
@@ -201,6 +213,13 @@ def generate_chart(df, ticker: str, levels: dict, display_name: str | None = Non
         Line2D([0], [0], color=EMA_LONG_C, lw=2, label=f"EMA {config.EMA_PERIODS[-1]}"),
         Line2D([0], [0], color=BB, lw=1, ls="--", label="Bollinger"),
     ]
+    # Reserve an empty headroom band above the data, then park the legend in it:
+    # every plotted series (candles, EMAs, bands) and every S/R line sits at or
+    # below the old y-max, so nothing can run through the legend. (Anchoring the
+    # legend outside the axes is not an option — mpf panels ignore
+    # subplots_adjust and it collides with the figure-level stats text.)
+    ymin, ymax = price_ax.get_ylim()
+    price_ax.set_ylim(ymin, ymax + 0.12 * (ymax - ymin))
     price_ax.legend(handles=legend, loc="upper left", ncol=4, frameon=False,
                     labelcolor=MUTED, fontsize=9, handlelength=2.0, columnspacing=1.2)
 
@@ -228,7 +247,9 @@ def generate_chart(df, ticker: str, levels: dict, display_name: str | None = Non
              fontweight="bold", ha="right", va="center")
     fig.text(0.925, 0.895, f"AS OF {as_of}  ·  YFINANCE", color=MUTED, fontsize=9,
              ha="right", va="center")
-    fig.text(0.925, 0.035, f"Levels: {levels.get('lookback', len(df))} candles · pivot clusters",
+    fig.text(0.925, 0.035,
+             f"Levels: {levels.get('lookback', len(df))} candles · pivot clusters "
+             f"(solid = {config.MIN_LEVEL_TOUCHES}+ touches)",
              color=MUTED, fontsize=8, ha="right")
 
     fig.savefig(out_path, dpi=config.CHART_DPI, facecolor=BACKGROUND, bbox_inches="tight")

@@ -29,8 +29,11 @@ import compliance
 import config
 import discovery as discovery_stage
 import earnings_dd as earnings_dd_stage
+import grounding
 import head_to_head as head_to_head_stage
 import hidden_value as hidden_value_stage
+import market_cap as market_cap_stage
+import reviewer
 import scorecard as scorecard_stage
 import state_manager as state
 import synthesizer
@@ -115,6 +118,17 @@ def publish_photo(image_path: str, caption: str, dry_run: bool) -> dict | None:
     return telegram_publisher.post_photo(image_path, caption)
 
 
+def grounding_warn(text: str, sources: list, tag: str) -> list[str]:
+    """Warn-only grounding check for the weekly/composite posts: log the flags
+    (the daily reviewer surfaces them) but don't block the post. The news
+    pipeline uses the HARD gate inside run_auto instead."""
+    flagged = grounding.verify(text, sources)
+    if flagged:
+        print(f"[grounding] WARNING {tag}: ungrounded figures {flagged} "
+              "(posted anyway — flagged for the reviewer)")
+    return flagged
+
+
 # ---- modes ------------------------------------------------------------
 
 def run_auto(dry_run: bool) -> None:
@@ -152,10 +166,17 @@ def run_auto(dry_run: bool) -> None:
         return fund_cache[tkr]
 
     published = 0
+    # Daily diversity gate: tickers already covered today (any mode, any run).
+    posted_today = state.tickers_posted_today()
     for item in relevant:
         if published >= config.MAX_POSTS_PER_RUN:
             break
         ticker = primary_ticker(item)
+        if ticker and posted_today.get(ticker, 0) >= config.MAX_POSTS_PER_TICKER_PER_DAY:
+            # A second story on an already-covered name is redundancy, not news
+            # — checked BEFORE the model calls so a skipped item costs nothing.
+            print(f"[diversity] {ticker} already covered today — skipping {item.get('id')}")
+            continue
         df = frames.get(ticker) if ticker else None
         tech = technicals.summarize(ticker, df) if df is not None else None
         fund = get_fund(ticker) if ticker else None
@@ -174,14 +195,43 @@ def run_auto(dry_run: bool) -> None:
             print(f"[synth] empty body for {item.get('id')}, skipping")
             continue
 
+        # HARD grounding gate: every number in the draft must be traceable to
+        # the retrieved data (news text, technicals, fundamentals, macro).
+        # One retry with the offending figures named; still failing -> skip.
+        sources = [item, tech or {}, fund or {}, macro_context]
+        first_flags = grounding.verify(body, sources)
+        if first_flags:
+            print(f"[grounding] retrying {item.get('id')}: ungrounded {first_flags}")
+            try:
+                body = synthesizer.synthesize(client, item, tech, analysis,
+                                              feedback=grounding.retry_feedback(first_flags))
+            except Exception as exc:  # noqa: BLE001
+                print(f"[grounding] retry failed for {item.get('id')}: {exc}")
+                continue
+            still_flagged = grounding.verify(body, sources)
+            if not body.strip() or still_flagged:
+                print(f"[grounding] SKIPPING {item.get('id')}: still ungrounded "
+                      f"after retry: {still_flagged or '(empty rewrite)'}")
+                continue
+
         # Ticker item with price data -> chart + caption. Otherwise text post.
         caption = None
+        chart_meta = None
         try:
             if df is not None and tech and tech.get("available"):
                 caption = compliance.format_caption(body)
                 enriched = technicals.enrich(df)
                 levels = technicals.find_key_levels(enriched)
                 chart_path = chart_generator.generate_chart(enriched, ticker, levels)
+                chart_meta = {
+                    "support": levels.get("support"),
+                    "resistance": levels.get("resistance"),
+                    "support_touches": levels.get("support_touches"),
+                    "resistance_touches": levels.get("resistance_touches"),
+                    "lookback": levels.get("lookback"),
+                    "candles_shown": min(config.CHART_DISPLAY_CANDLES, len(enriched)),
+                    "last_price": tech.get("last_price"),
+                }
                 publish_photo(chart_path, caption, dry_run)
             else:
                 header = compliance.build_header([ticker] if ticker else None)
@@ -193,6 +243,8 @@ def run_auto(dry_run: bool) -> None:
             print(f"[publish] failed for {item.get('id')}: {exc}")
             continue
         published += 1
+        if ticker:
+            posted_today[ticker] = posted_today.get(ticker, 0) + 1
         # Dry-run is a pure preview: never mutate committed dedup state, so a
         # real run later still posts these once the channel is wired up.
         if dry_run:
@@ -208,6 +260,12 @@ def run_auto(dry_run: bool) -> None:
                 "category": (item.get("classification") or {}).get("category"),
                 "id": item.get("id"),
                 "dry_run": dry_run,
+                # Full published content + chart metadata: this is what the
+                # daily review agent reads (the pipeline's own copy of the
+                # channel — the Bot API can't fetch channel history).
+                "caption": caption or body,
+                "chart": chart_meta,
+                "grounding_retry": first_flags or None,
             }
         )
         # Log the call (lean + conviction) for the weekly scorecard.
@@ -262,7 +320,8 @@ def run_discovery(dry_run: bool, force: bool) -> None:
     if not dry_run:
         state.set_last_discovery_date(current_state, today.isoformat())
         state.append_post_log(
-            {"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "discovery", "dry_run": dry_run}
+            {"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "discovery",
+             "dry_run": dry_run, "caption": post}
         )
         state.save_state(current_state)
     print("[discovery] done" + (" (dry-run preview)" if dry_run else ""))
@@ -310,6 +369,7 @@ def run_week_ahead(dry_run: bool, force: bool) -> None:
             print(f"[week_ahead] chart failed for {label}: {exc}")
 
     caption = compliance.format_caption(body)
+    flags = grounding_warn(caption, [earnings, macro_snaps, core_snaps, news], "week_ahead")
     if dry_run:
         print(f"\n----- DRY RUN WEEK-AHEAD (charts: {chart_paths}) -----\n{caption}\n-----\n")
     else:
@@ -322,7 +382,8 @@ def run_week_ahead(dry_run: bool, force: bool) -> None:
     if not dry_run:
         state.set_marker(current_state, "last_week_ahead", today.isoformat())
         state.append_post_log(
-            {"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "week_ahead", "dry_run": dry_run}
+            {"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "week_ahead",
+             "dry_run": dry_run, "caption": caption, "grounding_flags": flags or None}
         )
         state.save_state(current_state)
     print("[week_ahead] done" + (" (dry-run preview)" if dry_run else ""))
@@ -387,6 +448,7 @@ def run_hidden_value(dry_run: bool, force: bool) -> None:
     frames = prices.fetch_ohlcv(chart_syms)
     chart_paths = [p for p in (_chart_for(t, frames) for t in chart_syms) if p]
 
+    flags = grounding_warn(text, [ranked, sector_map], "hidden_value")
     if dry_run:
         print(f"\n----- DRY RUN HIDDEN VALUE (charts: {chart_paths}) -----\n{text}\n-----\n")
     else:
@@ -398,7 +460,8 @@ def run_hidden_value(dry_run: bool, force: bool) -> None:
     if not dry_run:
         state.set_marker(current_state, "last_hidden_value", today.isoformat())
         state.append_post_log(
-            {"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "hidden_value", "dry_run": dry_run}
+            {"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "hidden_value",
+             "dry_run": dry_run, "caption": text, "grounding_flags": flags or None}
         )
         state.save_state(current_state)
     print("[hidden_value] done" + (" (dry-run preview)" if dry_run else ""))
@@ -437,6 +500,7 @@ def run_scorecard(dry_run: bool, force: bool) -> None:
     client = get_client()
     text = compliance.format_message(scorecard_stage.run_scorecard(client, stats))
     chart = scorecard_stage.scorecard_chart(stats)
+    flags = grounding_warn(text, [stats], "scorecard")
     if dry_run:
         print(f"\n----- DRY RUN SCORECARD (chart: {chart}) -----\n{text}\n-----\n")
     else:
@@ -446,7 +510,8 @@ def run_scorecard(dry_run: bool, force: bool) -> None:
         else:
             telegram_publisher.post_text(text)
         state.set_marker(current_state, "last_scorecard", today.isoformat())
-        state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "scorecard"})
+        state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "scorecard",
+                               "caption": text, "grounding_flags": flags or None})
         state.save_state(current_state)
     print("[scorecard] done" + (" (dry-run preview)" if dry_run else ""))
 
@@ -472,6 +537,7 @@ def run_head_to_head(dry_run: bool, force: bool) -> None:
         return
     caption = compliance.format_caption(body)
     charts = [p for p in (_chart_for(a, frames), _chart_for(b, frames)) if p]
+    flags = grounding_warn(caption, sides, "head_to_head")
     if dry_run:
         print(f"\n----- DRY RUN HEAD-TO-HEAD {a} vs {b} (charts: {charts}) -----\n{caption}\n-----\n")
     else:
@@ -482,7 +548,8 @@ def run_head_to_head(dry_run: bool, force: bool) -> None:
             telegram_publisher.post_text(caption)
         state.set_marker(current_state, "last_head_to_head", today.isoformat())
         state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "head_to_head",
-                               "pair": f"{a}/{b}"})
+                               "pair": f"{a}/{b}", "caption": caption,
+                               "grounding_flags": flags or None})
         state.save_state(current_state)
     print(f"[head_to_head] done ({a} vs {b})" + (" (dry-run preview)" if dry_run else ""))
 
@@ -513,6 +580,7 @@ def run_earnings_dd(dry_run: bool, force: bool) -> None:
         return
     caption = compliance.format_caption(body)
     chart = _chart_for(ticker, frames)
+    flags = grounding_warn(caption, [entry, history, fund or {}, tech or {}], "earnings_dd")
     if dry_run:
         print(f"\n----- DRY RUN EARNINGS DD {ticker} (chart: {chart}) -----\n{caption}\n-----\n")
     else:
@@ -524,7 +592,8 @@ def run_earnings_dd(dry_run: bool, force: bool) -> None:
         done.add(f"{ticker}:{entry['date']}")
         state.set_marker(current_state, "earnings_dd_done", sorted(done)[-50:])
         state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "earnings_dd",
-                               "ticker": ticker})
+                               "ticker": ticker, "caption": caption,
+                               "grounding_flags": flags or None})
         state.save_state(current_state)
     print(f"[earnings_dd] done ({ticker})" + (" (dry-run preview)" if dry_run else ""))
 
@@ -563,6 +632,7 @@ def run_bubble_index(dry_run: bool, force: bool) -> None:
     client = get_client()
     text = compliance.format_message(bubble_index_stage.run_bubble_index(client, index))
     gauge = bubble_index_stage.gauge_chart(index)
+    flags = grounding_warn(text, [index], "bubble_index")
     if dry_run:
         print(f"\n----- DRY RUN BUBBLE INDEX {index['score']}/100 {index['label']} (chart: {gauge}) -----\n{text}\n-----\n")
     else:
@@ -573,9 +643,71 @@ def run_bubble_index(dry_run: bool, force: bool) -> None:
             telegram_publisher.post_text(text)
         state.set_marker(current_state, "last_bubble_index", today.isoformat())
         state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "bubble_index",
-                               "score": index["score"]})
+                               "score": index["score"], "caption": text,
+                               "grounding_flags": flags or None})
         state.save_state(current_state)
     print(f"[bubble_index] done ({index['score']}/100)" + (" (dry-run preview)" if dry_run else ""))
+
+
+def run_market_cap(dry_run: bool, force: bool) -> None:
+    """Top-20 market-cap leaderboard — checked after each news run, but posted
+    ONLY when the top-20 ordering changed (or on the inaugural run)."""
+    current_state = state.load_state()
+    today = dt.date.today()
+    if not force and state.get_marker(current_state, "last_market_cap") == today.isoformat():
+        print("[market_cap] already posted today")
+        return
+    ranked = market_cap_stage.fetch_ranking()
+    if len(ranked) < config.MARKET_CAP_TOP_N:
+        print(f"[market_cap] only {len(ranked)} caps available; skipping")
+        return
+    new_order = [r["ticker"] for r in ranked]
+    prev_order = state.get_marker(current_state, "market_cap_top20")
+    changes = market_cap_stage.compare(prev_order, new_order)
+    if changes is None:
+        print("[market_cap] top-20 ordering unchanged — nothing to post")
+        return
+    chart = market_cap_stage.ranking_chart(ranked, changes)
+    caption = market_cap_stage.build_caption(ranked, changes)
+    publish_photo(chart, caption, dry_run)
+    if not dry_run:
+        state.set_marker(current_state, "market_cap_top20", new_order)
+        state.set_marker(current_state, "last_market_cap", today.isoformat())
+        state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "market_cap",
+                               "caption": caption,
+                               "moves": len(changes["moved"]) + len(changes["entered"])})
+        state.save_state(current_state)
+    print("[market_cap] done" + (" (dry-run preview)" if dry_run else ""))
+
+
+def run_review(dry_run: bool, force: bool) -> None:
+    """Daily editor-in-chief: review everything the channel published, then
+    refresh editorial_notes.json — the directives every subsequent analyst/
+    writer prompt obeys. The full review is committed under reviews/."""
+    current_state = state.load_state()
+    today = dt.date.today()
+    if not force and state.get_marker(current_state, "last_review") == today.isoformat():
+        print("[review] already ran today")
+        return
+    entries = reviewer.load_recent_posts()
+    if not entries:
+        print("[review] nothing published in the review window; skipping")
+        return
+    findings = reviewer.mechanical_findings(entries)
+    print(f"[review] {len(entries)} post(s), {len(findings)} mechanical finding(s)")
+    for f in findings:
+        print(f"  - {f}")
+    client = get_client()
+    critique, directives = reviewer.run_review(client, entries, findings)
+    if dry_run:
+        print(f"\n----- DRY RUN REVIEW -----\n{critique}\n\nDIRECTIVES: {directives}\n-----\n")
+        return
+    path = reviewer.save_review(today.isoformat(), entries, findings, critique, directives)
+    state.set_marker(current_state, "last_review", today.isoformat())
+    state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "review",
+                           "findings": len(findings), "directives": len(directives)})
+    state.save_state(current_state)
+    print(f"[review] saved {path}; {len(directives)} directive(s) now steer future posts")
 
 
 # ---- entrypoint -------------------------------------------------------
@@ -589,6 +721,8 @@ _MODES = {
     "head_to_head": run_head_to_head,
     "earnings_dd": run_earnings_dd,
     "bubble_index": run_bubble_index,
+    "market_cap": run_market_cap,
+    "review": run_review,
 }
 
 

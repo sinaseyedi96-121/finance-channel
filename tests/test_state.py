@@ -50,6 +50,23 @@ class StateTest(unittest.TestCase):
         state.set_last_discovery_date(s, "2026-08-02")
         self.assertEqual(state.last_discovery_date(s), "2026-08-02")
 
+    def test_tickers_posted_today(self):
+        orig = config.POSTS_LOG_FILE
+        config.POSTS_LOG_FILE = os.path.join(self.tmp.name, "posts_log.jsonl")
+        try:
+            for entry in (
+                {"ts": "2026-08-03T15:30:00Z", "ticker": "AMZN", "dry_run": False},
+                {"ts": "2026-08-03T15:31:00Z", "ticker": "AMZN", "dry_run": False},
+                {"ts": "2026-08-03T16:00:00Z", "ticker": "MSFT", "dry_run": True},
+                {"ts": "2026-08-02T10:00:00Z", "ticker": "NVDA", "dry_run": False},
+                {"ts": "2026-08-03T17:00:00Z", "dry_run": False},  # no ticker
+            ):
+                state.append_post_log(entry)
+            counts = state.tickers_posted_today("2026-08-03")
+            self.assertEqual(counts, {"AMZN": 2})  # dry-run + other days excluded
+        finally:
+            config.POSTS_LOG_FILE = orig
+
 
 if __name__ == "__main__":
     unittest.main()

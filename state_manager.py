@@ -105,6 +105,30 @@ def get_calls(state: dict) -> list:
 
 # ---- published-post log ----------------------------------------------
 
+def tickers_posted_today(today_iso: str | None = None) -> dict:
+    """Ticker -> count of published (non-dry-run) posts logged for the given
+    UTC day, across every run and mode. Drives the daily diversity gate."""
+    import datetime as dt
+    day = today_iso or dt.datetime.utcnow().date().isoformat()
+    counts: dict[str, int] = {}
+    if not os.path.exists(config.POSTS_LOG_FILE):
+        return counts
+    with open(config.POSTS_LOG_FILE, "r") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                entry = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if entry.get("dry_run") or not entry.get("ticker"):
+                continue
+            if str(entry.get("ts", "")).startswith(day):
+                counts[entry["ticker"]] = counts.get(entry["ticker"], 0) + 1
+    return counts
+
+
 def append_post_log(entry: dict) -> None:
     """Append one JSONL record. Best-effort: never break a run over logging."""
     try:
