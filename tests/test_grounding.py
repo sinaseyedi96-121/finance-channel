@@ -39,6 +39,12 @@ class GroundingTest(unittest.TestCase):
         self.assertEqual(self.flags("cap now $2.5T after the move"), [])
         self.assertEqual(self.flags("revenue of $170B beat"), [])
 
+    def test_spelled_out_trillion_grounds_the_suffix_form(self):
+        # "$2 trillion" in the news must license a "$2T" caption (the r in
+        # tRillion is the one spelled-out suffix that isn't <letter>+"illion").
+        sources = [{"headline": "Company nears a $2 trillion valuation"}]
+        self.assertEqual(grounding.verify("chasing the $2T club", sources), [])
+
     def test_ratio_vs_percent_units(self):
         # Data stores the margin as a 0.23 ratio; captions quote 23%.
         self.assertEqual(self.flags("margins at 23%"), [])

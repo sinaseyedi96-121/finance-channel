@@ -49,7 +49,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add post_history.json posts_log.jsonl editorial_notes.json reviews/
+          # A dry-run review writes nothing — only add paths that exist, or
+          # git add fails on the missing pathspec.
+          for path in post_history.json posts_log.jsonl editorial_notes.json reviews; do
+            [ -e "$path" ] && git add "$path"
+          done
           if git diff --staged --quiet; then
             echo "No state changes"
             exit 0

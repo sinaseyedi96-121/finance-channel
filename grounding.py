@@ -25,7 +25,7 @@ import config
 # The suffix must end the word so the "m" of "3.5 months" is not read as million.
 _NUMBER_RE = re.compile(
     r"(?<![\w.])\$?(\d{1,3}(?:,\d{3})+|\d+)(\.\d+)?\s*"
-    r"(?:([kKmMbBtT])(?:illion|n)?(?![A-Za-z]))?",
+    r"(?:([kKmMbBtT])(?:r?illion|n)?(?![A-Za-z]))?",
 )
 
 _SCALE_EXP = {"k": 3, "m": 6, "b": 9, "t": 12}
