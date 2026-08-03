@@ -17,12 +17,71 @@
       "stop": null,
       "target": 287.16,
       "ticker": "AMZN"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-03",
+      "lean": "bullish",
+      "price": 126.02,
+      "stop": null,
+      "target": 137.29,
+      "ticker": "PLTR"
+    },
+    {
+      "conviction": 8,
+      "date": "2026-08-03",
+      "lean": "bullish",
+      "price": 208.36,
+      "stop": null,
+      "target": 214.35,
+      "ticker": "NVDA"
+    },
+    {
+      "conviction": 8,
+      "date": "2026-08-03",
+      "lean": "bullish",
+      "price": 374.12,
+      "stop": null,
+      "target": 374.81,
+      "ticker": "GOOGL"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-03",
+      "lean": "neutral",
+      "price": 489.17,
+      "stop": null,
+      "target": 489.75,
+      "ticker": "MSFT"
     }
   ],
   "last_bubble_index": "2026-08-02",
   "last_discovery": "2026-08-02",
   "last_hidden_value": "2026-08-02",
+  "last_market_cap": "2026-08-03",
   "last_week_ahead": "2026-08-03",
+  "market_cap_top20": [
+    "NVDA",
+    "GOOGL",
+    "AAPL",
+    "MSFT",
+    "AMZN",
+    "TSM",
+    "AVGO",
+    "META",
+    "TSLA",
+    "BRK-B",
+    "WMT",
+    "V",
+    "ASML",
+    "JNJ",
+    "MA",
+    "COST",
+    "ORCL",
+    "CVX",
+    "UNH",
+    "KO"
+  ],
   "posted_ids": [
     "finnhub:141082634",
     "finnhub:141081555",
@@ -39,6 +98,10 @@
     "fred:DCOILWTICO:2026-07-27",
     "fred:DCOILBRENTEU:2026-07-27",
     "finnhub:141098791",
-    "finnhub:141098756"
+    "finnhub:141098756",
+    "finnhub:141098993",
+    "finnhub:141098746",
+    "finnhub:141100581",
+    "finnhub:141098747"
   ]
 }
