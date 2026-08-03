@@ -39,6 +39,12 @@ class GroundingTest(unittest.TestCase):
         self.assertEqual(self.flags("cap now $2.5T after the move"), [])
         self.assertEqual(self.flags("revenue of $170B beat"), [])
 
+    def test_numbers_in_dict_keys_ground(self):
+        # find_key_levels/fib_levels store ratios IN the key (fib_0.236) —
+        # quoting the ratio itself must not flag. Caught live in CI.
+        sources = [{"fib_0.236": 371.2, "fib_0.618": 344.05}]
+        self.assertEqual(grounding.verify("retracing to the 0.618 fib at 344", sources), [])
+
     def test_spelled_out_trillion_grounds_the_suffix_form(self):
         # "$2 trillion" in the news must license a "$2T" caption (the r in
         # tRillion is the one spelled-out suffix that isn't <letter>+"illion").

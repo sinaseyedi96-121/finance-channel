@@ -84,7 +84,14 @@ def allowed_values(sources: list) -> set[float]:
             for value, _decimals, _raw in extract_numbers(node):
                 found.add(value)
         elif isinstance(node, dict):
-            for v in node.values():
+            for k, v in node.items():
+                # Keys can carry numbers too (fib_0.236, fib_0.618) — the
+                # underscore blocks the regex, so split and try each part.
+                for part in str(k).replace("_", " ").split():
+                    try:
+                        found.add(float(part))
+                    except ValueError:
+                        pass
                 walk(v)
         elif isinstance(node, (list, tuple)):
             for v in node:
