@@ -125,6 +125,33 @@
       "stop": null,
       "target": 287.2,
       "ticker": "AMZN"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-04",
+      "lean": "bullish",
+      "price": 497.06,
+      "stop": null,
+      "target": 513.5,
+      "ticker": "MSFT"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-04",
+      "lean": "bullish",
+      "price": 421.29,
+      "stop": null,
+      "target": 440.02,
+      "ticker": "AVGO"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-04",
+      "lean": "neutral",
+      "price": 31.68,
+      "stop": null,
+      "target": 33.07,
+      "ticker": "SMCI"
     }
   ],
   "earnings_dd_done": [
@@ -186,6 +213,8 @@
     "finnhub:141108646",
     "finnhub:141108454",
     "finnhub:141108459",
-    "finnhub:141108482"
+    "finnhub:141108482",
+    "finnhub:141109856",
+    "finnhub:141110151"
   ]
 }
