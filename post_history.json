@@ -91,6 +91,9 @@
       "ticker": "TSLA"
     }
   ],
+  "earnings_dd_done": [
+    "AMD:2026-08-04"
+  ],
   "last_bubble_index": "2026-08-02",
   "last_discovery": "2026-08-02",
   "last_hidden_value": "2026-08-02",
