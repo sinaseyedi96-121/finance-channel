@@ -89,6 +89,42 @@
       "stop": null,
       "target": 413.01,
       "ticker": "TSLA"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-04",
+      "lean": "neutral",
+      "price": 157.59,
+      "stop": null,
+      "target": 163.16,
+      "ticker": "PLTR"
+    },
+    {
+      "conviction": 9,
+      "date": "2026-08-04",
+      "lean": "bullish",
+      "price": 209.82,
+      "stop": null,
+      "target": 213.73,
+      "ticker": "NVDA"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-04",
+      "lean": "neutral",
+      "price": 376.52,
+      "stop": null,
+      "target": 393.88,
+      "ticker": "GOOGL"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-04",
+      "lean": "neutral",
+      "price": 277.2,
+      "stop": null,
+      "target": 287.2,
+      "ticker": "AMZN"
     }
   ],
   "earnings_dd_done": [
@@ -97,7 +133,7 @@
   "last_bubble_index": "2026-08-02",
   "last_discovery": "2026-08-02",
   "last_hidden_value": "2026-08-02",
-  "last_market_cap": "2026-08-03",
+  "last_market_cap": "2026-08-04",
   "last_review": "2026-08-04",
   "last_week_ahead": "2026-08-03",
   "market_cap_top20": [
@@ -111,16 +147,16 @@
     "META",
     "TSLA",
     "BRK-B",
+    "LLY",
+    "JPM",
     "WMT",
+    "AMD",
     "V",
     "ASML",
+    "XOM",
     "JNJ",
     "MA",
-    "COST",
-    "ORCL",
-    "CVX",
-    "UNH",
-    "KO"
+    "BAC"
   ],
   "posted_ids": [
     "finnhub:141082634",
@@ -146,6 +182,10 @@
     "finnhub:141100659",
     "finnhub:141100583",
     "finnhub:141101346",
-    "finnhub:141100733"
+    "finnhub:141100733",
+    "finnhub:141108646",
+    "finnhub:141108454",
+    "finnhub:141108459",
+    "finnhub:141108482"
   ]
 }
