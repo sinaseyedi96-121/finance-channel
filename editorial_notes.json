@@ -1,10 +1,10 @@
 {
-  "date": "2026-08-04",
+  "date": "2026-08-05",
   "directives": [
-    "Limit each ticker to one post per day; merge duplicate earnings or bubble-risk alerts into a single roundup post.",
-    "Add at least one index or macro post per day to balance the stock-heavy mix; commodities need a detailed analysis, not just a ticker mention.",
-    "Never draw support or resistance from fewer than 3 touches; if only 1-2 touches exist, label the level as 'provisional' or omit it.",
-    "Drop the boilerplate '\ud83e\udee7 Bubble risk' line from every caption; only include it when the post's category is not already bubble_risk.",
-    "Space analytical posts at least 30 minutes apart; never publish more than 2 posts within a 10-minute window."
+    "Vary headline emoji \u2014 last 4 posts all opened with \ud83d\udea8",
+    "Avoid posting same ticker more than once per day; consolidate duplicate earnings/bubble_risk posts",
+    "Add macro or index-level commentary (SPX, NDX) to break single-stock flood",
+    "Label chart levels with touch count in caption when support/resistance has fewer than 3 touches",
+    "Clarify verdict score meaning (e.g., 'Neutral (7/10)' vs text) or align score with stated risk"
   ]
 }
