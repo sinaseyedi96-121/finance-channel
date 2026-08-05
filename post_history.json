@@ -188,6 +188,42 @@
       "stop": null,
       "target": 287.2,
       "ticker": "AMZN"
+    },
+    {
+      "conviction": 8,
+      "date": "2026-08-05",
+      "lean": "bullish",
+      "price": 420.86,
+      "stop": null,
+      "target": 440.02,
+      "ticker": "AVGO"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-05",
+      "lean": "bullish",
+      "price": 363.47,
+      "stop": null,
+      "target": 374.81,
+      "ticker": "GOOGL"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-05",
+      "lean": "neutral",
+      "price": 488.74,
+      "stop": null,
+      "target": 489.75,
+      "ticker": "MSFT"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-05",
+      "lean": "bullish",
+      "price": 31.34,
+      "stop": null,
+      "target": 33.07,
+      "ticker": "SMCI"
     }
   ],
   "earnings_dd_done": [
@@ -196,13 +232,13 @@
   "last_bubble_index": "2026-08-02",
   "last_discovery": "2026-08-02",
   "last_hidden_value": "2026-08-05",
-  "last_market_cap": "2026-08-04",
+  "last_market_cap": "2026-08-05",
   "last_review": "2026-08-05",
   "last_week_ahead": "2026-08-03",
   "market_cap_top20": [
     "NVDA",
-    "GOOGL",
     "AAPL",
+    "GOOGL",
     "MSFT",
     "AMZN",
     "TSM",
@@ -255,6 +291,9 @@
     "finnhub:141121093",
     "finnhub:141121091",
     "finnhub:141121222",
-    "finnhub:141121126"
+    "finnhub:141121126",
+    "finnhub:141122312",
+    "finnhub:141122278",
+    "finnhub:141121162"
   ]
 }
