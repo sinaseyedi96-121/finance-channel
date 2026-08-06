@@ -224,6 +224,42 @@
       "stop": null,
       "target": 33.07,
       "ticker": "SMCI"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-06",
+      "lean": "neutral",
+      "price": 156.79,
+      "stop": null,
+      "target": 163.16,
+      "ticker": "PLTR"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-06",
+      "lean": "bullish",
+      "price": 273.27,
+      "stop": null,
+      "target": 274.75,
+      "ticker": "AMZN"
+    },
+    {
+      "conviction": 8,
+      "date": "2026-08-06",
+      "lean": "bullish",
+      "price": 497.01,
+      "stop": null,
+      "target": 512.12,
+      "ticker": "MSFT"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-06",
+      "lean": "bullish",
+      "price": 488.48,
+      "stop": null,
+      "target": 557.32,
+      "ticker": "AMD"
     }
   ],
   "earnings_dd_done": [
@@ -232,7 +268,7 @@
   "last_bubble_index": "2026-08-02",
   "last_discovery": "2026-08-02",
   "last_hidden_value": "2026-08-05",
-  "last_market_cap": "2026-08-05",
+  "last_market_cap": "2026-08-06",
   "last_review": "2026-08-06",
   "last_week_ahead": "2026-08-03",
   "market_cap_top20": [
@@ -246,16 +282,16 @@
     "META",
     "TSLA",
     "BRK-B",
-    "LLY",
-    "JPM",
     "WMT",
-    "AMD",
     "V",
     "ASML",
-    "XOM",
     "JNJ",
     "MA",
-    "BAC"
+    "BAC",
+    "COST",
+    "ORCL",
+    "PLTR",
+    "CVX"
   ],
   "posted_ids": [
     "finnhub:141082634",
@@ -294,6 +330,9 @@
     "finnhub:141121126",
     "finnhub:141122312",
     "finnhub:141122278",
-    "finnhub:141121162"
+    "finnhub:141121162",
+    "finnhub:141132640",
+    "finnhub:141133967",
+    "finnhub:141133674"
   ]
 }
