@@ -1,10 +1,10 @@
 {
-  "date": "2026-08-05",
+  "date": "2026-08-06",
   "directives": [
-    "Vary headline emoji \u2014 last 4 posts all opened with \ud83d\udea8",
-    "Avoid posting same ticker more than once per day; consolidate duplicate earnings/bubble_risk posts",
-    "Add macro or index-level commentary (SPX, NDX) to break single-stock flood",
-    "Label chart levels with touch count in caption when support/resistance has fewer than 3 touches",
-    "Clarify verdict score meaning (e.g., 'Neutral (7/10)' vs text) or align score with stated risk"
+    "Consolidate duplicate ticker posts into one per day unless a major new catalyst emerges",
+    "Avoid publishing more than two consecutive posts from the same category (e.g., bubble_risk, earnings)",
+    "Only cite support/resistance levels with at least 3 touches; otherwise label them as tentative",
+    "Ensure every post has a non-empty caption with a clear headline and key number",
+    "Split captions over 2000 characters into a thread or shorten to avoid clipping"
   ]
 }
