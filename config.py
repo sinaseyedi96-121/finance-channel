@@ -193,6 +193,16 @@ CHART_DIR = "charts"
 # (Was 120 — the reviewer flagged that the tighter crop made levels look arbitrary.)
 CHART_DISPLAY_CANDLES = 180
 CHART_DPI = 160
+LONG_TF_LABEL = "DAILY"                # weeks/months view — the existing daily chart
+
+# ---- Short-timeframe chart (near-term view: hours-to-days) ----
+# A second, hourly-candle chart posted alongside the daily one so a reader can
+# see both "what happens in the next few hours/days" (this) and "the next few
+# weeks/months" (the daily chart above) in one post.
+SHORT_TF_INTERVAL = "60m"              # yfinance hourly candles
+SHORT_TF_PERIOD_DAYS = 60              # fetch window; ~390 hourly bars, enough for EMA(200)
+SHORT_TF_DISPLAY_CANDLES = 60          # ~9 trading days shown
+SHORT_TF_LABEL = "HOURLY"
 
 # =====================================================================
 # INGEST  (stage 1 — one module per source under ingest/)

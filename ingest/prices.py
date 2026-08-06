@@ -13,19 +13,24 @@ import pandas as pd
 import config
 
 
-def fetch_ohlcv(symbols: list[str] | None = None) -> dict[str, pd.DataFrame]:
-    """Download daily OHLCV for each symbol. Missing/failed symbols are simply
-    omitted from the returned dict (logged, never raised)."""
+def fetch_ohlcv(symbols: list[str] | None = None, interval: str | None = None,
+                period_days: int | None = None) -> dict[str, pd.DataFrame]:
+    """Download OHLCV for each symbol (daily by default). Pass `interval` /
+    `period_days` to pull a different granularity, e.g. the short-timeframe
+    hourly chart. Missing/failed symbols are simply omitted from the returned
+    dict (logged, never raised)."""
     import yfinance as yf
 
     symbols = symbols or config.ALL_PRICE_SYMBOLS
+    interval = interval or config.PRICE_INTERVAL
+    period_days = period_days or config.PRICE_LOOKBACK_DAYS
     out: dict[str, pd.DataFrame] = {}
     for symbol in symbols:
         try:
             df = yf.download(
                 symbol,
-                period=f"{config.PRICE_LOOKBACK_DAYS}d",
-                interval=config.PRICE_INTERVAL,
+                period=f"{period_days}d",
+                interval=interval,
                 auto_adjust=False,
                 progress=False,
             )

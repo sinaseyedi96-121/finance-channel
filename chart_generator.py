@@ -95,23 +95,30 @@ def _headline(last, levels: dict) -> str:
 
 
 def _price_label(ax, value: float, label: str, color: str) -> None:
+    # Anchored near the LEFT edge, over the older candles — the right edge is
+    # the most recent price action and a label box sitting there covers it up.
     ax.text(
-        0.992, value, f" {label}  {value:,.2f} ",
+        0.008, value, f" {label}  {value:,.2f} ",
         transform=ax.get_yaxis_transform(),
-        ha="right", va="center", color=TEXT, fontsize=9, fontweight="bold",
+        ha="left", va="center", color=TEXT, fontsize=9, fontweight="bold",
         bbox={"boxstyle": "round,pad=0.25", "facecolor": color, "edgecolor": color, "alpha": 0.88},
         zorder=8,
     )
 
 
-def generate_chart(df, ticker: str, levels: dict, display_name: str | None = None) -> str:
+def generate_chart(df, ticker: str, levels: dict, display_name: str | None = None,
+                   timeframe_label: str = config.LONG_TF_LABEL,
+                   display_candles: int | None = None) -> str:
     """Render the technical chart and return the saved PNG path. `df` must be
     enriched (technicals.enrich). `display_name` overrides the chart title for
-    non-ticker instruments (e.g. "Gold" instead of "$GC=F")."""
+    non-ticker instruments (e.g. "Gold" instead of "$GC=F"). `timeframe_label`
+    is shown in the header (e.g. "DAILY" or "HOURLY"); `display_candles`
+    overrides how many trailing candles are rendered (defaults to
+    config.CHART_DISPLAY_CANDLES)."""
     os.makedirs(config.CHART_DIR, exist_ok=True)
     safe = ticker.replace("^", "").replace("=", "_").replace("/", "_")
-    out_path = os.path.join(config.CHART_DIR, f"{safe}.png")
-    display = df.tail(config.CHART_DISPLAY_CANDLES).copy()
+    out_path = os.path.join(config.CHART_DIR, f"{safe}_{timeframe_label.lower()}.png")
+    display = df.tail(display_candles or config.CHART_DISPLAY_CANDLES).copy()
 
     add_plots = [
         mpf.make_addplot(display["bb_upper"], color=BB, width=0.7, linestyle="--", alpha=0.65),
@@ -149,7 +156,7 @@ def generate_chart(df, ticker: str, levels: dict, display_name: str | None = Non
         panel_ratios=panel_ratios,
         figratio=(16, 10),
         figscale=1.15,
-        datetime_format="%b %d",
+        datetime_format="%b %d" if timeframe_label == config.LONG_TF_LABEL else "%b %d %H:%M",
         xrotation=0,
         returnfig=True,
         warn_too_much_data=500,
@@ -220,7 +227,10 @@ def generate_chart(df, ticker: str, levels: dict, display_name: str | None = Non
     # subplots_adjust and it collides with the figure-level stats text.)
     ymin, ymax = price_ax.get_ylim()
     price_ax.set_ylim(ymin, ymax + 0.12 * (ymax - ymin))
-    price_ax.legend(handles=legend, loc="upper left", ncol=4, frameon=False,
+    # Upper RIGHT, not left — the S/R price labels now live on the left (see
+    # _price_label), and a resistance line sitting near the top of the range
+    # would otherwise run straight through the legend.
+    price_ax.legend(handles=legend, loc="upper right", ncol=4, frameon=False,
                     labelcolor=MUTED, fontsize=9, handlelength=2.0, columnspacing=1.2)
 
     price_ax.set_ylabel("PRICE · USD", color=MUTED, fontsize=9, fontweight="bold", labelpad=14)
@@ -231,7 +241,8 @@ def generate_chart(df, ticker: str, levels: dict, display_name: str | None = Non
         ax.grid(True, alpha=0.45)
         ax.tick_params(axis="both", labelsize=9)
 
-    as_of = str(display.index[-1])[:10]
+    # Sub-daily timeframes need the hour, not just the date, to read as "as of".
+    as_of = str(display.index[-1])[: 10 if timeframe_label == config.LONG_TF_LABEL else 16]
     stats = (
         f"{_headline(last, levels)}     CLOSE  {current_price:,.2f}     "
         f"RSI  {last['rsi']:.1f}     ATR  {last['atr_pct']:.2f}%     "
@@ -240,7 +251,7 @@ def generate_chart(df, ticker: str, levels: dict, display_name: str | None = Non
 
     title = display_name if display_name else f"${ticker}"
     fig.subplots_adjust(left=0.075, right=0.93, top=0.82, bottom=0.12, hspace=0.08)
-    fig.text(0.075, 0.94, f"{title}  ·  DAILY", color=TEXT, fontsize=22,
+    fig.text(0.075, 0.94, f"{title}  ·  {timeframe_label}", color=TEXT, fontsize=22,
              fontweight="bold", ha="left", va="center")
     fig.text(0.075, 0.895, stats, color=MUTED, fontsize=10, ha="left", va="center")
     fig.text(0.925, 0.94, "TECHNICAL SNAPSHOT", color=EMA_FAST_C, fontsize=9,

@@ -118,6 +118,42 @@ def publish_photo(image_path: str, caption: str, dry_run: bool) -> dict | None:
     return telegram_publisher.post_photo(image_path, caption)
 
 
+def publish_charts(chart_paths: list, caption: str, dry_run: bool) -> dict | None:
+    """Post one chart as a single photo, or several as an album (short + long
+    timeframe together). Falls back to the single-photo path automatically."""
+    if len(chart_paths) == 1:
+        return publish_photo(chart_paths[0], caption, dry_run)
+    if dry_run:
+        print(f"\n----- DRY RUN CHART ALBUM POST (charts: {chart_paths}) -----\n"
+              + caption + "\n---------------------------------------------------\n")
+        return {"dry_run": True}
+    import telegram_publisher
+    return telegram_publisher.post_album(chart_paths, caption)
+
+
+def _short_tf_chart(ticker: str) -> str | None:
+    """Fetch + render the near-term (hourly) companion chart for a ticker.
+    Best-effort: a failure here should never sink the main (daily) chart post."""
+    try:
+        frames = prices.fetch_ohlcv(
+            [ticker], interval=config.SHORT_TF_INTERVAL, period_days=config.SHORT_TF_PERIOD_DAYS,
+        )
+        short_df = frames.get(ticker)
+        if short_df is None or len(short_df) < config.EMA_PERIODS[-1]:
+            return None
+        enriched = technicals.enrich(short_df)
+        # Compute levels over the SAME window that gets displayed (like the daily
+        # chart does), so every pivot behind a drawn line is actually visible.
+        levels = technicals.find_key_levels(enriched, lookback=config.SHORT_TF_DISPLAY_CANDLES)
+        return chart_generator.generate_chart(
+            enriched, ticker, levels,
+            timeframe_label=config.SHORT_TF_LABEL, display_candles=config.SHORT_TF_DISPLAY_CANDLES,
+        )
+    except Exception as exc:  # noqa: BLE001 — a missing/failed intraday feed shouldn't kill the post
+        print(f"[chart] short-timeframe fetch failed for {ticker}: {exc}")
+        return None
+
+
 def grounding_warn(text: str, sources: list, tag: str) -> list[str]:
     """Warn-only grounding check for the weekly/composite posts: log the flags
     (the daily reviewer surfaces them) but don't block the post. The news
@@ -222,7 +258,14 @@ def run_auto(dry_run: bool) -> None:
                 caption = compliance.format_caption(body)
                 enriched = technicals.enrich(df)
                 levels = technicals.find_key_levels(enriched)
-                chart_path = chart_generator.generate_chart(enriched, ticker, levels)
+                long_chart = chart_generator.generate_chart(enriched, ticker, levels)
+                # Near-term (hourly) companion chart, posted alongside the daily
+                # one as a 2-photo album so a reader sees both the next-few-hours
+                # picture and the next-few-weeks picture in the same post.
+                chart_paths = [long_chart]
+                short_chart = _short_tf_chart(ticker)
+                if short_chart:
+                    chart_paths.append(short_chart)
                 chart_meta = {
                     "support": levels.get("support"),
                     "resistance": levels.get("resistance"),
@@ -231,8 +274,9 @@ def run_auto(dry_run: bool) -> None:
                     "lookback": levels.get("lookback"),
                     "candles_shown": min(config.CHART_DISPLAY_CANDLES, len(enriched)),
                     "last_price": tech.get("last_price"),
+                    "timeframes": len(chart_paths),
                 }
-                publish_photo(chart_path, caption, dry_run)
+                publish_charts(chart_paths, caption, dry_run)
             else:
                 header = compliance.build_header([ticker] if ticker else None)
                 publish_text(compliance.format_post(header, body), dry_run)
