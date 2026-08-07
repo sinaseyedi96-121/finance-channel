@@ -40,6 +40,11 @@ jobs:
       - name: Run daily review
         env:
           DEEPSEEK_KEY: ${{ secrets.DEEPSEEK_KEY }}
+          # Second provider for the review council (gpt-5.6-luna). If unset the
+          # council transparently falls back to running every seat on DeepSeek.
+          OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+          # Reader bot for best-effort channel engagement (reactions). Optional.
+          FINANCE_AAR_READER_BOT: ${{ secrets.FINANCE_AAR_READER_BOT }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHANNEL: ${{ secrets.TELEGRAM_CHANNEL }}
           DRY_RUN_FLAG: ${{ github.event.inputs.dry_run == 'true' && '--dry-run' || '' }}

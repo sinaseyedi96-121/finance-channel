@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 
 import config
+import reviewer
 from llm_client import chat, reason
 
 # Why each overlooked sector actually matters — handed to the analyst as the
@@ -132,6 +133,7 @@ def run_hidden_value(client, ranked: list[dict], sector_map: dict) -> str:
         model=config.SYNTHESIS_MODEL,
         system=WRITER_SYSTEM,
         user=context + "\n\nANALYST BRIEF:\n" + (brief or "(none)")
+        + reviewer.notes_block("hidden_value")
         + f"\n\nNow write the Hidden Value post introducing the best "
           f"{config.HIDDEN_VALUE_MAX_NAMES} names.",
         max_tokens=config.DISCOVERY_MAX_TOKENS,

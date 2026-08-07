@@ -12,6 +12,7 @@ import datetime as dt
 import json
 
 import config
+import reviewer
 from llm_client import chat, reason
 
 
@@ -57,6 +58,7 @@ def run_head_to_head(client, a: dict, b: dict) -> str:
     )
     return chat(
         client, model=config.SYNTHESIS_MODEL, system=WRITER_SYSTEM,
-        user=ctx + "\n\nANALYST BRIEF:\n" + (brief or "(none)") + "\n\nNow write the post.",
+        user=ctx + "\n\nANALYST BRIEF:\n" + (brief or "(none)")
+        + reviewer.notes_block("head_to_head") + "\n\nNow write the post.",
         max_tokens=config.DISCOVERY_MAX_TOKENS, temperature=config.SYNTHESIS_TEMPERATURE,
     )

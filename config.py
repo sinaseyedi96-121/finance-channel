@@ -126,6 +126,21 @@ DISCOVERY_MODEL = "deepseek-chat"            # writer (discovery reuses ANALYST_
 DISCOVERY_MAX_TOKENS = 1400
 DISCOVERY_TEMPERATURE = 0.4
 
+# --- Second provider: OpenAI (for the review COUNCIL only) ------------
+# The daily editorial council (reviewer.py) runs its critics across TWO
+# independent model families so a second opinion is genuinely independent —
+# DeepSeek grading DeepSeek's own prose is not a real cross-check. OpenAI is
+# reached with the SAME OpenAI-compatible SDK (llm_client.get_openai_client),
+# just a different key + default base_url. Key: OPENAI_KEY env var.
+#
+# GPT_MODEL is "gpt-5.6-luna" — OpenAI's low-cost, high-volume tier (~1M
+# context), well-suited to the specialist critique passes. IMPORTANT: use the
+# explicit "-luna" id, NOT the bare "gpt-5.6" alias, which routes to the pricier
+# "Sol" model. If OPENAI_KEY is unset (e.g. local dry-runs), the council falls
+# back to running every seat on DeepSeek — see reviewer._council_clients().
+OPENAI_BASE_URL = None                       # None -> SDK default (api.openai.com)
+GPT_MODEL = "gpt-5.6-luna"
+
 # =====================================================================
 # CLASSIFIER  (stage 2)
 # =====================================================================
@@ -387,19 +402,55 @@ MARKET_CAP_UNIVERSE = [
 MARKET_CAP_TOP_N = 20
 
 # =====================================================================
-# REVIEW AGENT  (daily, reviewer.py) — the channel's editor-in-chief loop
+# REVIEW COUNCIL  (daily, reviewer.py) — the channel's editorial board loop
 # =====================================================================
 # Reads the posts log (full captions + chart metadata, i.e. what the channel
-# actually published), runs deterministic checks, has Pro critique the output,
-# and writes EDITORIAL_NOTES_FILE — short directives the analyst and writer
-# prompts obey on every subsequent post. Full reviews land in REVIEWS_DIR.
-REVIEW_LOOKBACK_DAYS = 3               # posts window the reviewer considers
-REVIEW_MAX_DIRECTIVES = 5              # directives carried into future prompts
+# actually published), runs deterministic checks, then convenes a MULTI-AGENT
+# EDITORIAL COUNCIL that critiques the output from four specialist angles across
+# TWO model families, debates for one round, and has a moderator distil the
+# result into EDITORIAL_NOTES_FILE — short directives, each TAGGED with the
+# prompt(s) it targets, that the writer/analyst stages obey on every subsequent
+# post. Full reviews land in REVIEWS_DIR as the audit trail.
+REVIEW_LOOKBACK_DAYS = 3               # posts window the council considers
+REVIEW_MAX_DIRECTIVES = 6             # directives carried into future prompts
 REVIEW_NOTES_MAX_AGE_DAYS = 7          # stale notes are ignored, not obeyed
 REVIEWS_DIR = "reviews"
 EDITORIAL_NOTES_FILE = "editorial_notes.json"
-REVIEW_MAX_TOKENS = 3000               # Pro critique budget
+REVIEW_MAX_TOKENS = 3000               # moderator arbitration budget
 REVIEW_TEMPERATURE = 0.3
+
+# ---- Council seats -----------------------------------------------------
+# Each seat is a distinct critic persona (system prompt lives in reviewer.py).
+# The four specialists critique in round 1, see each other and rebut in round 2,
+# then the MODERATOR arbitrates and a cheap distiller emits tagged directives.
+COUNCIL_ROLES = ["copy_editor", "growth", "compliance", "data_integrity"]
+COUNCIL_SPECIALIST_MAX_TOKENS = 1100   # per specialist, per round
+COUNCIL_SPECIALIST_TEMPERATURE = 0.4
+COUNCIL_ROUND2_ENABLED = True          # the "agents rebut each other" round
+
+# Provider rotation: which two seats run on OpenAI (Luna) vs DeepSeek (Pro) each
+# day. The pair is swapped on odd vs even ordinal days so no single seat is
+# permanently tied to one model family — over a week every seat is graded by
+# both, which is the point of using two providers. When OPENAI_KEY is absent the
+# OpenAI seats transparently fall back to DeepSeek (see reviewer._seat_model()).
+COUNCIL_OPENAI_ROLES_EVEN = ["growth", "data_integrity"]
+COUNCIL_OPENAI_ROLES_ODD = ["copy_editor", "compliance"]
+
+# Directive targets a moderator may tag. "global" reaches every writer/analyst.
+# market_cap / bubble_index are deliberately ABSENT — their captions are
+# mechanical (no LLM), so their fixes are logged as code-change notes instead.
+DIRECTIVE_TARGETS = ["global", "writer", "analyst", "week_ahead", "discovery",
+                     "hidden_value", "head_to_head", "earnings_dd", "scorecard"]
+
+# ---- Channel engagement (best-effort, phase-2 seed) --------------------
+# A SECOND bot (@finance_aar_reader_bot, token in FINANCE_AAR_READER_BOT) can
+# surface reader reactions on published posts, which the council reads as a weak
+# ground-truth signal for what actually lands. This is BEST-EFFORT: the Bot API
+# only exposes updates since the last poll and needs the bot to be a channel
+# admin with reactions enabled, so channel_reader.py degrades to nothing on any
+# failure and the council runs on posts_log.jsonl exactly as before.
+READER_BOT_TOKEN_ENV = "FINANCE_AAR_READER_BOT"
+CHANNEL_ENGAGEMENT_ENABLED = True
 
 # =====================================================================
 # PATHS  (committed JSON state — the only memory between ephemeral CI runs)

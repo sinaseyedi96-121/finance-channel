@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 
 import config
+import reviewer
 from llm_client import chat, reason
 
 ANALYST_SYSTEM = """You are a senior markets analyst writing the analytical basis
@@ -93,6 +94,7 @@ def run_week_ahead(client, earnings: list, macro_snaps: list,
         system=WRITER_SYSTEM,
         user=("WEEK CONTEXT:\n" + context
               + "\n\nANALYST BRIEF:\n" + (brief or "(none)")
+              + reviewer.notes_block("week_ahead")
               + "\n\nNow write the Week Ahead post."),
         max_tokens=config.DISCOVERY_MAX_TOKENS,
         temperature=config.SYNTHESIS_TEMPERATURE,

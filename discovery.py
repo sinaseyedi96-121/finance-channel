@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 
 import config
+import reviewer
 from llm_client import chat, reason
 
 SYSTEM_PROMPT = f"""You are a research analyst producing a weekly "worth watching"
@@ -85,7 +86,8 @@ def run_discovery(client, items: list[dict]) -> str:
         client,
         model=config.DISCOVERY_MODEL,
         system=SYSTEM_PROMPT,
-        user=block + "\n\nANALYST BRIEF:\n" + (brief or "(none)") + "\n\nNow write the note.",
+        user=block + "\n\nANALYST BRIEF:\n" + (brief or "(none)")
+        + reviewer.notes_block("discovery") + "\n\nNow write the note.",
         max_tokens=config.DISCOVERY_MAX_TOKENS,
         temperature=config.DISCOVERY_TEMPERATURE,
     )

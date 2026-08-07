@@ -24,6 +24,7 @@ from dotenv import load_dotenv
 
 import analyst
 import bubble_index as bubble_index_stage
+import channel_reader
 import chart_generator
 import compliance
 import config
@@ -740,9 +741,11 @@ def run_market_cap(dry_run: bool, force: bool) -> None:
 
 
 def run_review(dry_run: bool, force: bool) -> None:
-    """Daily editor-in-chief: review everything the channel published, then
-    refresh editorial_notes.json — the directives every subsequent analyst/
-    writer prompt obeys. The full review is committed under reviews/."""
+    """Daily editorial COUNCIL: four specialist critics debate everything the
+    channel published (across two model families, two rounds), a moderator
+    arbitrates, and the ruling is distilled into editorial_notes.json — the
+    TAGGED directives every subsequent writer/analyst prompt obeys. The full
+    debate is committed under reviews/ as the audit trail."""
     current_state = state.load_state()
     today = dt.date.today()
     if not force and state.get_marker(current_state, "last_review") == today.isoformat():
@@ -756,15 +759,34 @@ def run_review(dry_run: bool, force: bool) -> None:
     print(f"[review] {len(entries)} post(s), {len(findings)} mechanical finding(s)")
     for f in findings:
         print(f"  - {f}")
+    engagement = channel_reader.fetch_engagement()
+    if engagement:
+        print(f"[review] reader engagement on {len(engagement)} post(s)")
     client = get_client()
-    critique, directives = reviewer.run_review(client, entries, findings)
+    result = reviewer.run_review(client, entries, findings, engagement)
+    directives = result["directives"]
     if dry_run:
-        print(f"\n----- DRY RUN REVIEW -----\n{critique}\n\nDIRECTIVES: {directives}\n-----\n")
+        seats = ", ".join(f"{r}→{m}" for r, m in result["seat_models"].items())
+        print(f"\n----- DRY RUN REVIEW COUNCIL (seats: {seats}) -----")
+        print("\nMODERATOR RULING:\n" + result["moderator"])
+        print("\nDIRECTIVES:")
+        for d in directives:
+            print(f"  - [{', '.join(d['targets'])}] {d['text']}")
+        if result["code_changes"]:
+            print("\nNEEDS A CODE CHANGE:")
+            for c in result["code_changes"]:
+                print(f"  - {c}")
+        if result["compliance"]:
+            print("\nDIRECTIVE COMPLIANCE:")
+            for c in result["compliance"]:
+                print(f"  - [{c['status']}] {c['directive']}")
+        print("-----\n")
         return
-    path = reviewer.save_review(today.isoformat(), entries, findings, critique, directives)
+    path = reviewer.save_review(today.isoformat(), entries, findings, result)
     state.set_marker(current_state, "last_review", today.isoformat())
     state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "review",
-                           "findings": len(findings), "directives": len(directives)})
+                           "findings": len(findings), "directives": len(directives),
+                           "code_changes": len(result["code_changes"]) or None})
     state.save_state(current_state)
     print(f"[review] saved {path}; {len(directives)} directive(s) now steer future posts")
 

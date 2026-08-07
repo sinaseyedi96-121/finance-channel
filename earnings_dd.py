@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 
 import config
+import reviewer
 from llm_client import chat, reason
 
 ANALYST_SYSTEM = """You are a senior equity research analyst writing a pre-earnings
@@ -55,6 +56,7 @@ def run_earnings_dd(client, ticker: str, calendar_entry: dict, history: list,
     )
     return chat(
         client, model=config.SYNTHESIS_MODEL, system=WRITER_SYSTEM,
-        user=ctx + "\n\nANALYST BRIEF:\n" + (brief or "(none)") + "\n\nNow write the brief.",
+        user=ctx + "\n\nANALYST BRIEF:\n" + (brief or "(none)")
+        + reviewer.notes_block("earnings_dd") + "\n\nNow write the brief.",
         max_tokens=config.DISCOVERY_MAX_TOKENS, temperature=config.SYNTHESIS_TEMPERATURE,
     )

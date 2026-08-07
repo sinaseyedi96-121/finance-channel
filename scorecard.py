@@ -16,6 +16,7 @@ import os
 import re
 
 import config
+import reviewer
 from llm_client import chat, reason
 
 _LEAN_RE = re.compile(r"\b(bullish|bearish|neutral)\b", re.IGNORECASE)
@@ -155,6 +156,6 @@ def run_scorecard(client, stats: dict) -> str:
     return chat(
         client, model=config.SYNTHESIS_MODEL, system=WRITER_SYSTEM,
         user="STATS:\n" + ctx + "\n\nANALYST NOTES:\n" + (brief or "(none)")
-             + "\n\nNow write the scorecard post.",
+             + reviewer.notes_block("scorecard") + "\n\nNow write the scorecard post.",
         max_tokens=config.DISCOVERY_MAX_TOKENS, temperature=config.SYNTHESIS_TEMPERATURE,
     )

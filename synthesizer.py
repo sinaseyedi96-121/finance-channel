@@ -88,7 +88,7 @@ def synthesize(client, item: dict, tech: dict | None, analysis: str = "",
         "RETRIEVED DATA:\n" + build_data_block(item, tech)
         + "\n\nANALYST BRIEF (reason from this, keep numbers grounded to the data):\n"
         + (analysis or "(no brief provided — write from the data block)")
-        + reviewer.notes_block()
+        + reviewer.notes_block("writer")
         + feedback
         + "\n\nNow write the caption."
     )

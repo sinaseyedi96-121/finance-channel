@@ -78,7 +78,7 @@ def build_data_block(item: dict, tech: dict | None, fund: dict | None = None,
 def analyze(client, item: dict, tech: dict | None, fund: dict | None = None,
             macro: list | None = None) -> str:
     user = ("RETRIEVED DATA:\n" + build_data_block(item, tech, fund, macro)
-            + reviewer.notes_block())
+            + reviewer.notes_block("analyst"))
     return reason(
         client,
         model=config.ANALYST_MODEL,
