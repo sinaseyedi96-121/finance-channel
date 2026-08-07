@@ -7,11 +7,16 @@ Both are kept here behind config toggles (DISCLAIMER_ENABLED / LINT_ENABLED) so
 they can be switched back on later (e.g. if the channel monetizes) without a
 code change.
 
-Two outputs:
+Outputs:
   * format_caption(body)   — photo caption (plain text + emojis), capped at the
     Telegram caption limit. Used for the chart posts.
   * format_post(header, body) — HTML text message. Used for the weekly discovery
     post (no chart).
+  * format_caption_with_detail(body, detail) — HTML photo/album caption: the
+    visible body plus an optional <blockquote expandable> holding extra detail
+    (mover context, fuller reasoning) that Telegram folds behind "Show more".
+    Both halves count against the same caption budget, so the detail is clipped
+    to whatever room is left after the visible body.
 """
 
 from __future__ import annotations
@@ -77,6 +82,41 @@ def _clip(text: str, limit: int) -> str:
     return (window[:cut] if cut > 0 else window).rstrip() + ell
 
 
+DETAIL_MARKER = "===MORE==="
+
+
+def split_detail(text: str) -> tuple[str, str | None]:
+    """Split a writer's raw output on DETAIL_MARKER into (visible, detail).
+    detail is None when the marker is absent (writer had nothing extra to add,
+    or is a stage that doesn't know the contract) — always safe to call."""
+    if DETAIL_MARKER not in text:
+        return text, None
+    visible, _, detail = text.partition(DETAIL_MARKER)
+    detail = detail.strip()
+    return visible.strip(), (detail or None)
+
+
+def format_caption_with_detail(body: str, detail: str | None = None) -> str:
+    """HTML photo/album caption: visible body + optional expandable blockquote.
+
+    The visible body is never truncated to make room for detail — detail only
+    fills whatever budget is left over, and is dropped entirely if there isn't
+    enough of it to be worth showing.
+    """
+    violations = lint(body) + lint(detail or "")
+    if violations:
+        raise ValueError(f"lint violation: {sorted(set(v.lower() for v in violations))}")
+    disclaimer = _disclaimer()
+    visible = _clip(_strip_markdown(body).strip(), config.TELEGRAM_CAPTION_LIMIT - len(disclaimer))
+    caption = html.escape(visible) + html.escape(disclaimer)
+    remaining = config.TELEGRAM_CAPTION_LIMIT - len(disclaimer) - len(visible)
+    detail = _strip_markdown(detail).strip() if detail else ""
+    if detail and remaining > 40:
+        detail = _clip(detail, remaining)
+        caption += f"\n\n<blockquote expandable>{html.escape(detail)}</blockquote>"
+    return caption
+
+
 def format_caption(body: str) -> str:
     """Photo caption: plain text + emojis, optional lint/disclaimer, hard-capped.
 
@@ -90,13 +130,24 @@ def format_caption(body: str) -> str:
     return _clip(caption, config.TELEGRAM_CAPTION_LIMIT - len(disclaimer)) + disclaimer
 
 
-def format_post(header: str, body: str) -> str:
-    """HTML text message (discovery). Body is HTML-escaped for Telegram."""
-    violations = lint(body)
+def format_post(header: str, body: str, detail: str | None = None) -> str:
+    """HTML text message (discovery, and non-chart news items). Body is
+    HTML-escaped; optional detail rides in an expandable blockquote, budgeted
+    from the (roomier) message limit rather than the caption limit."""
+    violations = lint(body) + lint(detail or "")
     if violations:
         raise ValueError(f"lint violation: {sorted(set(v.lower() for v in violations))}")
-    post = f"<b>{html.escape(header)}</b>\n\n{html.escape(body.strip())}{_disclaimer()}"
-    return post[: config.TELEGRAM_MESSAGE_LIMIT]
+    disclaimer = _disclaimer()
+    head = f"<b>{html.escape(header)}</b>\n\n"
+    budget = config.TELEGRAM_MESSAGE_LIMIT - len(head) - len(disclaimer)
+    visible = _clip(body.strip(), budget)
+    post = head + html.escape(visible) + html.escape(disclaimer)
+    remaining = budget - len(visible)
+    detail = detail.strip() if detail else ""
+    if detail and remaining > 40:
+        detail = _clip(detail, remaining)
+        post += f"\n\n<blockquote expandable>{html.escape(detail)}</blockquote>"
+    return post
 
 
 def format_message(body: str) -> str:

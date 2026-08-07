@@ -109,26 +109,28 @@ def publish_text(text: str, dry_run: bool) -> dict | None:
     return telegram_publisher.post_message(text)
 
 
-def publish_photo(image_path: str, caption: str, dry_run: bool) -> dict | None:
+def publish_photo(image_path: str, caption: str, dry_run: bool,
+                  parse_mode: str | None = None) -> dict | None:
     if dry_run:
         print(f"\n----- DRY RUN CHART POST (chart: {image_path}) -----\n"
               + caption + "\n---------------------------------------------------\n")
         return {"dry_run": True}
     import telegram_publisher
-    return telegram_publisher.post_photo(image_path, caption)
+    return telegram_publisher.post_photo(image_path, caption, parse_mode=parse_mode)
 
 
-def publish_charts(chart_paths: list, caption: str, dry_run: bool) -> dict | None:
+def publish_charts(chart_paths: list, caption: str, dry_run: bool,
+                   parse_mode: str | None = None) -> dict | None:
     """Post one chart as a single photo, or several as an album (short + long
     timeframe together). Falls back to the single-photo path automatically."""
     if len(chart_paths) == 1:
-        return publish_photo(chart_paths[0], caption, dry_run)
+        return publish_photo(chart_paths[0], caption, dry_run, parse_mode=parse_mode)
     if dry_run:
         print(f"\n----- DRY RUN CHART ALBUM POST (charts: {chart_paths}) -----\n"
               + caption + "\n---------------------------------------------------\n")
         return {"dry_run": True}
     import telegram_publisher
-    return telegram_publisher.post_album(chart_paths, caption)
+    return telegram_publisher.post_album(chart_paths, caption, parse_mode=parse_mode)
 
 
 def _short_tf_chart(ticker: str) -> str | None:
@@ -252,10 +254,13 @@ def run_auto(dry_run: bool) -> None:
 
         # Ticker item with price data -> chart + caption. Otherwise text post.
         caption = None
+        detail = None
         chart_meta = None
         try:
             if df is not None and tech and tech.get("available"):
-                caption = compliance.format_caption(body)
+                visible, detail = compliance.split_detail(body)
+                caption = compliance.format_caption(visible)
+                full_caption = compliance.format_caption_with_detail(visible, detail)
                 enriched = technicals.enrich(df)
                 levels = technicals.find_key_levels(enriched)
                 long_chart = chart_generator.generate_chart(enriched, ticker, levels)
@@ -276,10 +281,11 @@ def run_auto(dry_run: bool) -> None:
                     "last_price": tech.get("last_price"),
                     "timeframes": len(chart_paths),
                 }
-                publish_charts(chart_paths, caption, dry_run)
+                publish_charts(chart_paths, full_caption, dry_run, parse_mode="HTML")
             else:
                 header = compliance.build_header([ticker] if ticker else None)
-                publish_text(compliance.format_post(header, body), dry_run)
+                caption, detail = compliance.split_detail(body)
+                publish_text(compliance.format_post(header, caption, detail), dry_run)
         except ValueError as exc:
             print(f"[format] skipping {item.get('id')}: {exc}")
             continue
@@ -308,6 +314,7 @@ def run_auto(dry_run: bool) -> None:
                 # daily review agent reads (the pipeline's own copy of the
                 # channel — the Bot API can't fetch channel history).
                 "caption": caption or body,
+                "detail": detail or None,
                 "chart": chart_meta,
                 "grounding_retry": first_flags or None,
             }
@@ -412,22 +419,25 @@ def run_week_ahead(dry_run: bool, force: bool) -> None:
         except Exception as exc:  # noqa: BLE001
             print(f"[week_ahead] chart failed for {label}: {exc}")
 
-    caption = compliance.format_caption(body)
-    flags = grounding_warn(caption, [earnings, macro_snaps, core_snaps, news], "week_ahead")
+    visible, detail = compliance.split_detail(body)
+    caption = compliance.format_caption(visible)
+    full_caption = compliance.format_caption_with_detail(visible, detail)
+    flags = grounding_warn(body, [earnings, macro_snaps, core_snaps, news], "week_ahead")
     if dry_run:
-        print(f"\n----- DRY RUN WEEK-AHEAD (charts: {chart_paths}) -----\n{caption}\n-----\n")
+        print(f"\n----- DRY RUN WEEK-AHEAD (charts: {chart_paths}) -----\n{full_caption}\n-----\n")
     else:
         import telegram_publisher
         if chart_paths:
-            telegram_publisher.post_album(chart_paths, caption[: config.TELEGRAM_CAPTION_LIMIT])
+            telegram_publisher.post_album(chart_paths, full_caption, parse_mode="HTML")
         else:
-            telegram_publisher.post_message(caption[: config.TELEGRAM_MESSAGE_LIMIT])
+            telegram_publisher.post_message(full_caption)
 
     if not dry_run:
         state.set_marker(current_state, "last_week_ahead", today.isoformat())
         state.append_post_log(
             {"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "week_ahead",
-             "dry_run": dry_run, "caption": caption, "grounding_flags": flags or None}
+             "dry_run": dry_run, "caption": caption, "detail": detail or None,
+             "grounding_flags": flags or None}
         )
         state.save_state(current_state)
     print("[week_ahead] done" + (" (dry-run preview)" if dry_run else ""))
@@ -675,19 +685,22 @@ def run_bubble_index(dry_run: bool, force: bool) -> None:
         return
     client = get_client()
     text = compliance.format_message(bubble_index_stage.run_bubble_index(client, index))
+    detail = bubble_index_stage.pillar_detail(index)
     gauge = bubble_index_stage.gauge_chart(index)
     flags = grounding_warn(text, [index], "bubble_index")
     if dry_run:
-        print(f"\n----- DRY RUN BUBBLE INDEX {index['score']}/100 {index['label']} (chart: {gauge}) -----\n{text}\n-----\n")
+        preview = compliance.format_caption_with_detail(text, detail) if gauge else text
+        print(f"\n----- DRY RUN BUBBLE INDEX {index['score']}/100 {index['label']} (chart: {gauge}) -----\n{preview}\n-----\n")
     else:
         import telegram_publisher
         if gauge:
-            telegram_publisher.post_photo(gauge, text[: config.TELEGRAM_CAPTION_LIMIT])
+            full_caption = compliance.format_caption_with_detail(text, detail)
+            telegram_publisher.post_photo(gauge, full_caption, parse_mode="HTML")
         else:
             telegram_publisher.post_text(text)
         state.set_marker(current_state, "last_bubble_index", today.isoformat())
         state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "bubble_index",
-                               "score": index["score"], "caption": text,
+                               "score": index["score"], "caption": text, "detail": detail or None,
                                "grounding_flags": flags or None})
         state.save_state(current_state)
     print(f"[bubble_index] done ({index['score']}/100)" + (" (dry-run preview)" if dry_run else ""))
@@ -713,12 +726,14 @@ def run_market_cap(dry_run: bool, force: bool) -> None:
         return
     chart = market_cap_stage.ranking_chart(ranked, changes)
     caption = market_cap_stage.build_caption(ranked, changes)
-    publish_photo(chart, caption, dry_run)
+    detail = market_cap_stage.build_detail(changes)
+    full_caption = compliance.format_caption_with_detail(caption, detail)
+    publish_photo(chart, full_caption, dry_run, parse_mode="HTML")
     if not dry_run:
         state.set_marker(current_state, "market_cap_top20", new_order)
         state.set_marker(current_state, "last_market_cap", today.isoformat())
         state.append_post_log({"ts": dt.datetime.utcnow().isoformat() + "Z", "mode": "market_cap",
-                               "caption": caption,
+                               "caption": caption, "detail": detail or None,
                                "moves": len(changes["moved"]) + len(changes["entered"])})
         state.save_state(current_state)
     print("[market_cap] done" + (" (dry-run preview)" if dry_run else ""))

@@ -131,6 +131,55 @@ def ranking_chart(ranked: list[dict], changes: dict) -> str:
     return out_path
 
 
+def _detail_tickers(changes: dict) -> list[str]:
+    """Tickers worth a one-line fundamentals blurb in the expandable detail:
+    every entrant/exit, plus the movers already called out in the visible
+    caption (build_caption shows at most the first 6)."""
+    moved = [t for t, _old, _new in changes["moved"][:6]]
+    tickers, seen = [], set()
+    for t in changes["entered"] + changes["exited"] + moved:
+        if t not in seen:
+            seen.add(t)
+            tickers.append(t)
+    return tickers
+
+
+def _blurb(row: dict) -> str:
+    """One mechanical line of context for a ticker, straight from fundamentals —
+    whatever fields are available (yfinance coverage varies by name)."""
+    parts = []
+    if row.get("sector"):
+        parts.append(row["sector"])
+    if row.get("trailing_pe"):
+        parts.append(f"P/E {row['trailing_pe']:.0f}")
+    if row.get("revenue_growth_pct") is not None:
+        parts.append(f"rev {row['revenue_growth_pct']:+.0f}%")
+    if row.get("pct_of_52w_range") is not None:
+        parts.append(f"{row['pct_of_52w_range']:.0f}% of 52w range")
+    return " · ".join(parts)
+
+
+def build_detail(changes: dict) -> str:
+    """Expandable-quote detail for the leaderboard caption: one mechanical line
+    per notable mover, sourced straight from fetched fundamentals — same
+    "nothing to hallucinate" guarantee as the rest of this file, no LLM call."""
+    if changes["initial"]:
+        return ""
+    tickers = _detail_tickers(changes)
+    if not tickers:
+        return ""
+    rows = {r["ticker"]: r for r in fundamentals.fetch(tickers)}
+    lines = []
+    for t in tickers:
+        row = rows.get(t)
+        blurb = _blurb(row) if row else ""
+        if not blurb:
+            continue
+        tag = "NEW" if t in changes["entered"] else ("OUT" if t in changes["exited"] else "MOVED")
+        lines.append(f"{t} ({tag}): {blurb}")
+    return "\n".join(lines)
+
+
 def build_caption(ranked: list[dict], changes: dict) -> str:
     """Mechanical caption — every figure comes straight from the fetched caps."""
     top3 = "  ".join(

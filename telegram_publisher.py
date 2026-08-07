@@ -61,14 +61,21 @@ def post_text(text: str) -> dict:
     return resp.json()["result"]
 
 
-def post_photo(image_path: str, caption: str) -> dict:
-    """Send a chart image with a plain-text (emoji) caption. Caption is capped at
-    Telegram's photo-caption limit."""
-    caption = caption[: config.TELEGRAM_CAPTION_LIMIT]
+def post_photo(image_path: str, caption: str, parse_mode: str | None = None) -> dict:
+    """Send a chart image with a caption. Plain text by default; pass
+    parse_mode="HTML" for captions built with compliance.format_caption_with_detail
+    (already sized in decoded-text space) — naive truncation here would otherwise
+    slice mid-tag/mid-entity and break Telegram's HTML parser, so we only clip
+    blindly on the plain-text path."""
+    if not parse_mode:
+        caption = caption[: config.TELEGRAM_CAPTION_LIMIT]
+    data = {"chat_id": _chat_id(), "caption": caption}
+    if parse_mode:
+        data["parse_mode"] = parse_mode
     with open(image_path, "rb") as f:
         resp = requests.post(
             f"{_base_url()}/sendPhoto",
-            data={"chat_id": _chat_id(), "caption": caption},
+            data=data,
             files={"photo": f},
             timeout=45,
         )
@@ -76,10 +83,11 @@ def post_photo(image_path: str, caption: str) -> dict:
     return resp.json()["result"]
 
 
-def post_album(image_paths: list, caption: str = "") -> dict:
-    """Send up to 10 charts as one media-group album; caption (plain text) rides
-    on the first image."""
-    caption = caption[: config.TELEGRAM_CAPTION_LIMIT]
+def post_album(image_paths: list, caption: str = "", parse_mode: str | None = None) -> dict:
+    """Send up to 10 charts as one media-group album; caption rides on the first
+    image. See post_photo for why blind truncation is skipped on the HTML path."""
+    if not parse_mode:
+        caption = caption[: config.TELEGRAM_CAPTION_LIMIT]
     media = []
     files = {}
     try:
@@ -88,6 +96,8 @@ def post_album(image_paths: list, caption: str = "") -> dict:
             item = {"type": "photo", "media": f"attach://{key}"}
             if i == 0 and caption:
                 item["caption"] = caption
+                if parse_mode:
+                    item["parse_mode"] = parse_mode
             media.append(item)
             files[key] = open(path, "rb")
         resp = requests.post(

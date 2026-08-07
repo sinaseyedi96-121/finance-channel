@@ -171,6 +171,25 @@ def compute_index(inputs: dict) -> dict:
     }
 
 
+_STATUS_EMOJI = {"red": "🔴", "amber": "🟡", "green": "🟢"}
+_PILLAR_NAMES = {
+    "valuation": "Valuation", "concentration": "Concentration",
+    "exuberance": "Exuberance", "capex_gdp": "Capex/GDP", "credit": "Credit",
+}
+
+
+def pillar_detail(index: dict) -> str:
+    """Expandable-quote detail for the gauge caption: every pillar's status,
+    score, and mechanical detail string. All of this is already computed by
+    compute_index above — no LLM call, nothing to hallucinate."""
+    lines = []
+    for p in index.get("pillars", []):
+        emoji = _STATUS_EMOJI.get(p["status"], "⚪")
+        name = _PILLAR_NAMES.get(p["name"], p["name"])
+        lines.append(f"{emoji} {name} {p['score']}/100 — {p['detail']}")
+    return "\n".join(lines)
+
+
 # ---- chart -----------------------------------------------------------
 
 def gauge_chart(index: dict) -> str | None:

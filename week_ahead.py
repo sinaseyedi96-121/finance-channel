@@ -35,9 +35,10 @@ analytical notes (no emojis/headline — the writer adds those)."""
 WRITER_SYSTEM = """You write the WEEK AHEAD post for a finance-in-the-AI-boom
 Telegram channel, from a senior analyst's brief. Emoji-rich, punchy, informative.
 
-⚠️ HARD LIMIT: the whole post MUST be under 950 characters (it's a chart-album
-caption — anything longer is cut off). Be ruthlessly concise; every section must
-fit, especially the last one. Drop detail before you drop a section.
+⚠️ HARD LIMIT: the shape below (before any ===MORE===) MUST be under 950
+characters (it's a chart-album caption — anything longer is cut off). Be
+ruthlessly concise; every section must fit, especially the last one. Drop
+detail before you drop a section.
 
 Shape (tight):
 📅 THE WEEK AHEAD — <one-line hook>
@@ -45,6 +46,13 @@ Shape (tight):
 👀 Watch: 2-3 bullets — names/levels at decision points + what a break/bounce means.
 🌍 Macro: one line on S&P/Gold/Oil & risk appetite.
 🫧 Bubble watch: one honest line on froth vs fundamentals.
+
+OPTIONAL DEPTH: after the shape above, on its own line write exactly ===MORE===
+then 3-5 sentences of the grounded detail you had to cut for space — the fuller
+per-earnings context, additional watch levels, or a deeper macro/bubble read.
+This rides in a collapsed "Show more" box on Telegram: bonus depth for readers
+who tap in, never required — the shape above must stand alone and complete
+without it. Omit ===MORE=== entirely if you have nothing worth adding.
 
 RULES: only use figures from the provided context; do not invent numbers. No
 "not financial advice" disclaimer. Plain text + bullets, no markdown headers."""

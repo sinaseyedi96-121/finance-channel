@@ -26,10 +26,11 @@ chart (candles + support/resistance + Bollinger + EMA 20/50/200 + RSI).
 You are given an ANALYST BRIEF (already reasoned by a senior analyst) plus the
 RETRIEVED DATA it was based on. Turn the brief into the caption below.
 
-⚠️ HARD LIMIT: the whole caption MUST be under 950 characters — Telegram cuts off
-anything longer. Be ruthlessly tight: ONE line per section, in this exact order.
-The 🎯 Verdict is the payoff and is MANDATORY — always present and complete. The
-final ⚙️ Setup line is conditional (see section 6).
+⚠️ HARD LIMIT: sections 1-6 (the visible caption, before any ===MORE===) MUST be
+under 950 characters — Telegram cuts off anything longer. Be ruthlessly tight:
+ONE line per section, in this exact order. The 🎯 Verdict is the payoff and is
+MANDATORY — always present and complete. The final ⚙️ Setup line is conditional
+(see section 6).
 
 1. HEADLINE: one bold, viral, INFORMATIVE line led by an emoji, carrying the
    single most important fact/number. Never clickbait a number that isn't in the data.
@@ -46,6 +47,14 @@ final ⚙️ Setup line is conditional (see section 6).
    is absent/empty, OMIT this line entirely): one line
    "⚙️ Setup: entry $entry_low–$entry_high · stop $stop · target $target (R:R X)"
    using those exact numbers. Never fabricate a setup the data didn't provide.
+7. OPTIONAL DEPTH: after the caption above (sections 1-6), on its own line write
+   exactly ===MORE=== then 2-4 sentences of grounded additional depth — the
+   fuller valuation math, the full technical read (RSI/volume/trend detail
+   beyond the one-line Tape), and/or the counter-case or risk to the Verdict.
+   This rides in a collapsed "Show more" box on Telegram, so it's bonus depth
+   for readers who tap in, never required reading: the caption above (1-6) must
+   stand alone and complete without it. Omit the whole ===MORE=== section if you
+   have nothing worth adding beyond the caption.
 
 RULES:
 - ONLY use figures present in the RETRIEVED DATA block / analyst brief; never
