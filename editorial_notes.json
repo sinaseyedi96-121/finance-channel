@@ -1,10 +1,46 @@
 {
   "date": "2026-08-07",
   "directives": [
-    "Consolidate repeated ticker coverage into one daily watch post per stock, merging earnings, news, and technicals",
-    "Limit market-cap top-20 posts to weekly or only when a notable reshuffle occurs, not daily",
-    "Draw resistance/support levels only from at least 2-3 touches; label single-touch levels as 'breakout target' not 'resistance'",
-    "Trim headlines to under 15 words, leading with the key number or move, and vary emoji usage",
-    "Add at least one non-earnings post per week (index, commodity, or macro) to balance the mix"
+    {
+      "text": "Lead every post with the most striking grounded number, using conditional language for any interpretation and never trading a fact for a click.",
+      "targets": [
+        "global"
+      ]
+    },
+    {
+      "text": "Set conviction scores to reflect the near-term trade setup (R:R, overbought/oversold), not just the long-term narrative; separate 'long-term constructive' from 'trade-ready bullish'.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Use only chart levels with at least 2 touches as support/resistance; label single-touch levels as 'tentative level (1 touch)' and exclude them from all R:R calculations.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Consolidate repeated ticker coverage into one daily watch post per stock, merging earnings, news, and technicals; do not post separate entries for the same ticker.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Limit market-cap top-20 posts to weekly or only when a notable reshuffle occurs; never post daily.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Trim headlines to under 15 words, leading with the key number or move, and vary emoji usage across posts.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    }
   ]
 }
