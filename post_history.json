@@ -296,6 +296,42 @@
       "stop": null,
       "target": 557.32,
       "ticker": "AMD"
+    },
+    {
+      "conviction": 4,
+      "date": "2026-08-07",
+      "lean": "neutral",
+      "price": 165.59,
+      "stop": null,
+      "target": 188.83,
+      "ticker": "PLTR"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-07",
+      "lean": "neutral",
+      "price": 222.22,
+      "stop": null,
+      "target": 232.28,
+      "ticker": "NVDA"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-07",
+      "lean": "neutral",
+      "price": 426.91,
+      "stop": null,
+      "target": 440.02,
+      "ticker": "AVGO"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-07",
+      "lean": "bullish",
+      "price": 30.15,
+      "stop": null,
+      "target": 33.25,
+      "ticker": "SMCI"
     }
   ],
   "earnings_dd_done": [
@@ -373,6 +409,9 @@
     "finnhub:141140231",
     "finnhub:141140260",
     "finnhub:141140252",
-    "finnhub:141140218"
+    "finnhub:141140218",
+    "finnhub:141146762",
+    "finnhub:141146188",
+    "finnhub:141137291"
   ]
 }
