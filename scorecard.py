@@ -100,16 +100,26 @@ def scorecard_chart(stats: dict) -> str | None:
     import chart_generator as cg  # reuse the dark theme + PT Serif setup
 
     rows = sorted(graded, key=lambda g: g["return_pct"])
-    labels = [f"${g['ticker']} {g['lean'][:4]}" for g in rows]
+    # Include each call's age so two same-ticker/same-lean calls read as distinct
+    # rows. Critically, plot at explicit NUMERIC y-positions rather than passing
+    # the label strings to barh(): duplicate label strings would otherwise be
+    # treated as one category, collapsing bars onto a shared row while the value
+    # labels below (indexed 0..N-1) spill above the axes.
+    labels = [f"${g['ticker']} {g['lean'][:4]}"
+              + (f" · {g['days']}d" if g.get("days") is not None else "")
+              for g in rows]
     vals = [g["return_pct"] for g in rows]
     colors = [cg.UP if g["correct"] else cg.DOWN for g in rows]
+    y = list(range(len(rows)))
 
     fig, ax = plt.subplots(figsize=(11, max(3.5, 0.5 * len(rows) + 1.6)), facecolor=cg.BACKGROUND)
     ax.set_facecolor(cg.PANEL)
-    ax.barh(labels, vals, color=colors, height=0.62, alpha=0.92)
+    ax.barh(y, vals, color=colors, height=0.62, alpha=0.92)
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels)
     ax.axvline(0, color=cg.MUTED, linewidth=0.9)
-    for y, v in enumerate(vals):
-        ax.text(v + (0.4 if v >= 0 else -0.4), y, f"{v:+.1f}%", va="center",
+    for yi, v in zip(y, vals):
+        ax.text(v + (0.4 if v >= 0 else -0.4), yi, f"{v:+.1f}%", va="center",
                 ha="left" if v >= 0 else "right", color=cg.TEXT, fontsize=9, fontweight="bold")
     ax.set_xlabel("RETURN SINCE CALL (%)", color=cg.MUTED, fontsize=9, fontweight="bold")
     ax.tick_params(colors=cg.MUTED, labelsize=9)
