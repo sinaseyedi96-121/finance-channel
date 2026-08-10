@@ -1,14 +1,14 @@
 {
-  "date": "2026-08-07",
+  "date": "2026-08-09",
   "directives": [
     {
-      "text": "Lead every post with the most striking grounded number, using conditional language for any interpretation and never trading a fact for a click.",
+      "text": "Start every caption headline with the ticker or a short '<TICKER>: \u2026' lead, and ground any superlative claim with the metric and source in the headline or first sentence.",
       "targets": [
         "global"
       ]
     },
     {
-      "text": "Set conviction scores to reflect the near-term trade setup (R:R, overbought/oversold), not just the long-term narrative; separate 'long-term constructive' from 'trade-ready bullish'.",
+      "text": "Set conviction scores to match the near-term trade setup (R:R to nearest non-tentative resistance, RSI overbought/oversold), not the long-term narrative.",
       "targets": [
         "writer",
         "analyst"
@@ -17,7 +17,6 @@
     {
       "text": "Use only chart levels with at least 2 touches as support/resistance; label single-touch levels as 'tentative level (1 touch)' and exclude them from all R:R calculations.",
       "targets": [
-        "writer",
         "analyst"
       ]
     },
@@ -31,15 +30,13 @@
     {
       "text": "Limit market-cap top-20 posts to weekly or only when a notable reshuffle occurs; never post daily.",
       "targets": [
-        "writer",
-        "analyst"
+        "writer"
       ]
     },
     {
       "text": "Trim headlines to under 15 words, leading with the key number or move, and vary emoji usage across posts.",
       "targets": [
-        "writer",
-        "analyst"
+        "writer"
       ]
     }
   ]
