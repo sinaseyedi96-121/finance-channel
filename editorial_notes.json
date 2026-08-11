@@ -1,40 +1,42 @@
 {
-  "date": "2026-08-09",
+  "date": "2026-08-11",
   "directives": [
     {
-      "text": "Start every caption headline with the ticker or a short '<TICKER>: \u2026' lead, and ground any superlative claim with the metric and source in the headline or first sentence.",
-      "targets": [
-        "global"
-      ]
-    },
-    {
-      "text": "Set conviction scores to match the near-term trade setup (R:R to nearest non-tentative resistance, RSI overbought/oversold), not the long-term narrative.",
+      "text": "Consolidate the three bubble_risk posts (GOOGL, AMZN, MSFT) into one thematic 'Hyperscaler Cloud-Concentration Risk Radar' post, attributing the 48% stat solely to GOOGL and framing AMZN/MSFT as hypothetical read-throughs.",
       "targets": [
         "writer",
         "analyst"
       ]
     },
     {
-      "text": "Use only chart levels with at least 2 touches as support/resistance; label single-touch levels as 'tentative level (1 touch)' and exclude them from all R:R calculations.",
-      "targets": [
-        "analyst"
-      ]
-    },
-    {
-      "text": "Consolidate repeated ticker coverage into one daily watch post per stock, merging earnings, news, and technicals; do not post separate entries for the same ticker.",
-      "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "Limit market-cap top-20 posts to weekly or only when a notable reshuffle occurs; never post daily.",
+      "text": "For AMZN, rewrite the headline to lead with AMZN's own risk (AWS concentration) and avoid implying the Google Cloud stat applies to AMZN; keep under 15 words.",
       "targets": [
         "writer"
       ]
     },
     {
-      "text": "Trim headlines to under 15 words, leading with the key number or move, and vary emoji usage across posts.",
+      "text": "In the scorecard, either source the +66% cumulative figure or remove it; hedge the 'don't short it' lesson with a limited observation.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Label any single-touch support/resistance level as 'tentative level (1 touch)' and exclude it from all R:R calculations and conviction scores; use only levels with at least 2 touches.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "In the SMCI earnings deep-dive, source or remove the $2.28 expected move and any ungrounded specific figures; if unsourced, replace with a range or qualitative statement.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Trim the discovery post's 'The chain' section to 3-5 concise bullets, removing repetitive phrasing and keeping each bullet under 20 words.",
       "targets": [
         "writer"
       ]
