@@ -503,6 +503,42 @@
       "stop": null,
       "target": 224.76,
       "ticker": "NVDA"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-12",
+      "lean": "bullish",
+      "price": 493.54,
+      "stop": null,
+      "target": 513.73,
+      "ticker": "MSFT"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-12",
+      "lean": "neutral",
+      "price": 486.97,
+      "stop": null,
+      "target": 557.32,
+      "ticker": "AMD"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-12",
+      "lean": "bullish",
+      "price": 418.83,
+      "stop": 397.54,
+      "target": 440.02,
+      "ticker": "AVGO"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-12",
+      "lean": "bullish",
+      "price": 268.96,
+      "stop": null,
+      "target": 274.75,
+      "ticker": "AMZN"
     }
   ],
   "earnings_dd_done": [
@@ -602,6 +638,10 @@
     "finnhub:141180982",
     "finnhub:141192677",
     "finnhub:141192570",
-    "finnhub:141191972"
+    "finnhub:141191972",
+    "finnhub:141193156",
+    "finnhub:141193427",
+    "finnhub:141187800",
+    "finnhub:141193416"
   ]
 }
