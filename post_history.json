@@ -467,6 +467,42 @@
       "stop": null,
       "target": 33.25,
       "ticker": "SMCI"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-12",
+      "lean": "bullish",
+      "price": 169.57,
+      "stop": null,
+      "target": 188.83,
+      "ticker": "PLTR"
+    },
+    {
+      "conviction": 8,
+      "date": "2026-08-12",
+      "lean": "bullish",
+      "price": 344.06,
+      "stop": 322.77,
+      "target": 374.81,
+      "ticker": "GOOGL"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-12",
+      "lean": "bullish",
+      "price": 35.74,
+      "stop": null,
+      "target": 36.8,
+      "ticker": "SMCI"
+    },
+    {
+      "conviction": 8,
+      "date": "2026-08-12",
+      "lean": "bullish",
+      "price": 222.62,
+      "stop": null,
+      "target": 224.76,
+      "ticker": "NVDA"
     }
   ],
   "earnings_dd_done": [
@@ -562,6 +598,10 @@
     "finnhub:141185661",
     "finnhub:141185256",
     "finnhub:141185176",
-    "finnhub:141181723"
+    "finnhub:141181723",
+    "finnhub:141180982",
+    "finnhub:141192677",
+    "finnhub:141192570",
+    "finnhub:141191972"
   ]
 }
