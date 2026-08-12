@@ -1,45 +1,4 @@
 {
-  "date": "2026-08-11",
-  "directives": [
-    {
-      "text": "Consolidate the three bubble_risk posts (GOOGL, AMZN, MSFT) into one thematic 'Hyperscaler Cloud-Concentration Risk Radar' post, attributing the 48% stat solely to GOOGL and framing AMZN/MSFT as hypothetical read-throughs.",
-      "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "For AMZN, rewrite the headline to lead with AMZN's own risk (AWS concentration) and avoid implying the Google Cloud stat applies to AMZN; keep under 15 words.",
-      "targets": [
-        "writer"
-      ]
-    },
-    {
-      "text": "In the scorecard, either source the +66% cumulative figure or remove it; hedge the 'don't short it' lesson with a limited observation.",
-      "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "Label any single-touch support/resistance level as 'tentative level (1 touch)' and exclude it from all R:R calculations and conviction scores; use only levels with at least 2 touches.",
-      "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "In the SMCI earnings deep-dive, source or remove the $2.28 expected move and any ungrounded specific figures; if unsourced, replace with a range or qualitative statement.",
-      "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "Trim the discovery post's 'The chain' section to 3-5 concise bullets, removing repetitive phrasing and keeping each bullet under 20 words.",
-      "targets": [
-        "writer"
-      ]
-    }
-  ]
+  "date": "2026-08-12",
+  "directives": []
 }
