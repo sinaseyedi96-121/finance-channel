@@ -1,4 +1,45 @@
 {
-  "date": "2026-08-12",
-  "directives": []
+  "date": "2026-08-13",
+  "directives": [
+    {
+      "text": "Enforce a chart-level quality gate: any support/resistance shown in caption or chart must have at least 3 touches in the chosen lookback, otherwise omit the level or label it as a trendline; caption must read values directly from the chart object.",
+      "targets": [
+        "global"
+      ]
+    },
+    {
+      "text": "Ban ungrounded numeric metrics: no number may appear in a caption unless it exists in the supplied data payload; if derived (e.g., expected move), label it explicitly as ATR-based and show the calculation.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Add a scheduling/selection rule: never post more than 2 consecutive same-category items in one drop; when 3+ same-category posts are queued, merge them into a comparative or sector read instead of repeating the same template.",
+      "targets": [
+        "global"
+      ]
+    },
+    {
+      "text": "Keep punchy hooks but hedge all projections and valuation claims: attribute forward-looking numbers to sources and use conditional language like 'if growth holds' or 'suggests' instead of asserting facts like 'set to hit $1T' or 'underpriced growth'.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Require every post to end with a clear \ud83c\udfaf Verdict line that matches the hook and the stated risk/reward; remove 'Setup: N/A' padding and never leave the verdict missing.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Cap caption length at 3000 characters and cut hidden_value posts to 3 names max, each with a verifiable thesis/catalyst/risk; replace 'nobody's watching' with 'under-covered' and label speculative names like QUBT as speculative.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    }
+  ]
 }
