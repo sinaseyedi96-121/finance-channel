@@ -611,6 +611,42 @@
       "stop": null,
       "target": 431.02,
       "ticker": "AVGO"
+    },
+    {
+      "conviction": null,
+      "date": "2026-08-14",
+      "lean": "neutral",
+      "price": 177.36,
+      "stop": null,
+      "target": 188.83,
+      "ticker": "PLTR"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-14",
+      "lean": "neutral",
+      "price": 348.14,
+      "stop": null,
+      "target": 374.81,
+      "ticker": "GOOGL"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-14",
+      "lean": "bullish",
+      "price": 264.62,
+      "stop": null,
+      "target": 274.75,
+      "ticker": "AMZN"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-14",
+      "lean": "bullish",
+      "price": 498.18,
+      "stop": null,
+      "target": 557.32,
+      "ticker": "AMD"
     }
   ],
   "earnings_dd_done": [
@@ -621,7 +657,7 @@
   "last_discovery": "2026-08-09",
   "last_head_to_head": "2026-08-13",
   "last_hidden_value": "2026-08-12",
-  "last_market_cap": "2026-08-13",
+  "last_market_cap": "2026-08-14",
   "last_review": "2026-08-14",
   "last_scorecard": "2026-08-08",
   "last_week_ahead": "2026-08-03",
@@ -635,8 +671,8 @@
     "AVGO",
     "META",
     "TSLA",
-    "LLY",
     "BRK-B",
+    "LLY",
     "JPM",
     "WMT",
     "AMD",
@@ -645,7 +681,7 @@
     "XOM",
     "JNJ",
     "MA",
-    "ORCL"
+    "BAC"
   ],
   "posted_ids": [
     "finnhub:141082634",
@@ -722,6 +758,9 @@
     "finnhub:141206420",
     "finnhub:141206436",
     "finnhub:141204668",
-    "finnhub:141205405"
+    "finnhub:141205405",
+    "finnhub:141215962",
+    "finnhub:141214981",
+    "finnhub:141209388"
   ]
 }
