@@ -1,46 +1,4 @@
 {
-  "date": "2026-08-15",
-  "directives": [
-    {
-      "text": "Enforce category and ticker interleaving in the scheduler: no more than 2 consecutive posts of the same mode/category, and no ticker repeated within 24 hours unless a distinct new event exists.",
-      "targets": [
-        "global"
-      ]
-    },
-    {
-      "text": "Require every caption to include a time-framed verdict line using only 'LT bullish / NT wait', 'LT bearish / NT wait', or 'Neutral / wait'; if the verdict is bullish, the R:R or overbought line must not contradict it without an explicit 'if estimates hold' caveat.",
-      "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "Allow punchy headlines only if they use attributed claims ('Yahoo warns...'), question form ('Could...?'), or number-with-condition ('If estimates hold, +38%'); never state a crash or certainty as fact.",
-      "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "Make the \ud83c\udfaf Verdict line non-optional and the final line of every caption; if space is tight, cut metric strings first, never the verdict, and end with a complete sentence instead of an ellipsis.",
-      "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "Label any resistance/support level with fewer than 2 touches as 'unconfirmed/indicative' in the caption, and never call it a 'key level' or 'needs break'; omit R:R if the nearest support is more than 30% below current price.",
-      "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "Rebuild the scorecard to be auditable: each call must include post timestamp, ticker, direction, horizon, success criterion, benchmark, and 'published vs internal' status; report open calls separately and show the hit-rate formula.",
-      "targets": [
-        "analyst",
-        "scorecard"
-      ]
-    }
-  ]
+  "date": "2026-08-16",
+  "directives": []
 }
