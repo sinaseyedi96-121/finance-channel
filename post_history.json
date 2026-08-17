@@ -755,6 +755,24 @@
       "stop": null,
       "target": 675.56,
       "ticker": "META"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-17",
+      "lean": "bullish",
+      "price": 38.28,
+      "stop": null,
+      "target": 51.4,
+      "ticker": "SMCI"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-17",
+      "lean": "bearish",
+      "price": 339.3,
+      "stop": null,
+      "target": 416.87,
+      "ticker": "TSLA"
     }
   ],
   "earnings_dd_done": [
@@ -880,6 +898,8 @@
     "finnhub:141230892",
     "finnhub:141238164",
     "finnhub:141225824",
-    "finnhub:141238463"
+    "finnhub:141238463",
+    "finnhub:141227390",
+    "finnhub:141239440"
   ]
 }
