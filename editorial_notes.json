@@ -1,4 +1,47 @@
 {
-  "date": "2026-08-16",
-  "directives": []
+  "date": "2026-08-17",
+  "directives": [
+    {
+      "text": "Lead every caption with the ticker and a clear actionable conclusion, not the news source or a vague hook.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "End every auto post with a '\ud83c\udfaf Verdict' line stating direction, conviction, key level, and action; never omit it.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Round all prices and targets to at most 2 decimals; reconcile any analyst target cited in the headline with the setup target.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Do not call a one-touch level support or resistance; label it 'reference zone' or omit it entirely.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Vary the opening emoji and template across consecutive posts; no more than 2 posts in the same category in a row.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Trim discovery and week-ahead captions to under 1800 characters, put the thesis first, and remove trailing ellipses.",
+      "targets": [
+        "week_ahead",
+        "discovery"
+      ]
+    }
+  ]
 }
