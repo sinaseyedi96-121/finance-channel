@@ -683,6 +683,42 @@
       "stop": null,
       "target": 414.62,
       "ticker": "AVGO"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-17",
+      "lean": "bullish",
+      "price": 345.9,
+      "stop": 322.77,
+      "target": 374.81,
+      "ticker": "GOOGL"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-17",
+      "lean": "bullish",
+      "price": 495.4,
+      "stop": null,
+      "target": 513.73,
+      "ticker": "MSFT"
+    },
+    {
+      "conviction": null,
+      "date": "2026-08-17",
+      "lean": "bullish",
+      "price": 514.39,
+      "stop": null,
+      "target": 557.32,
+      "ticker": "AMD"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-17",
+      "lean": "bullish",
+      "price": 392.99,
+      "stop": null,
+      "target": 414.62,
+      "ticker": "AVGO"
     }
   ],
   "earnings_dd_done": [
@@ -801,6 +837,10 @@
     "finnhub:141216888",
     "finnhub:141217056",
     "finnhub:141216131",
-    "finnhub:141215471"
+    "finnhub:141215471",
+    "finnhub:141225576",
+    "finnhub:141223608",
+    "finnhub:141225129",
+    "finnhub:141230892"
   ]
 }
