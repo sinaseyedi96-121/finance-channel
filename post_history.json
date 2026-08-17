@@ -719,6 +719,42 @@
       "stop": null,
       "target": 414.62,
       "ticker": "AVGO"
+    },
+    {
+      "conviction": null,
+      "date": "2026-08-17",
+      "lean": "bullish",
+      "price": 226.88,
+      "stop": null,
+      "target": 232.28,
+      "ticker": "NVDA"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-17",
+      "lean": "bearish",
+      "price": 174.14,
+      "stop": null,
+      "target": 188.83,
+      "ticker": "PLTR"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-17",
+      "lean": "neutral",
+      "price": 259.57,
+      "stop": null,
+      "target": 274.75,
+      "ticker": "AMZN"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-17",
+      "lean": "neutral",
+      "price": 567.61,
+      "stop": null,
+      "target": 675.56,
+      "ticker": "META"
     }
   ],
   "earnings_dd_done": [
@@ -841,6 +877,9 @@
     "finnhub:141225576",
     "finnhub:141223608",
     "finnhub:141225129",
-    "finnhub:141230892"
+    "finnhub:141230892",
+    "finnhub:141238164",
+    "finnhub:141225824",
+    "finnhub:141238463"
   ]
 }
