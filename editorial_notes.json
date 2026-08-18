@@ -1,46 +1,41 @@
 {
-  "date": "2026-08-17",
+  "date": "2026-08-18",
   "directives": [
+    {
+      "text": "Add a '\ud83c\udfaf Verdict' line to every auto post, including NVDA, AMD, and AVGO, stating direction, conviction, key level, and action.",
+      "targets": [
+        "writer"
+      ]
+    },
+    {
+      "text": "Label any one-touch level as 'reference zone' or omit it; do not call it support or resistance in NVDA, AMZN, and SMCI captions.",
+      "targets": [
+        "writer"
+      ]
+    },
+    {
+      "text": "Round all prices and targets to at most 2 decimals; change SMCI's 42.375 to 42.38.",
+      "targets": [
+        "writer"
+      ]
+    },
+    {
+      "text": "Keep discovery and week-ahead captions under 1800 characters, put the thesis first, and remove trailing ellipses.",
+      "targets": [
+        "discovery",
+        "week_ahead"
+      ]
+    },
+    {
+      "text": "Vary opening emoji and template across consecutive posts; avoid repeating the same category more than twice in a row.",
+      "targets": [
+        "global"
+      ]
+    },
     {
       "text": "Lead every caption with the ticker and a clear actionable conclusion, not the news source or a vague hook.",
       "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "End every auto post with a '\ud83c\udfaf Verdict' line stating direction, conviction, key level, and action; never omit it.",
-      "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "Round all prices and targets to at most 2 decimals; reconcile any analyst target cited in the headline with the setup target.",
-      "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "Do not call a one-touch level support or resistance; label it 'reference zone' or omit it entirely.",
-      "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "Vary the opening emoji and template across consecutive posts; no more than 2 posts in the same category in a row.",
-      "targets": [
-        "writer",
-        "analyst"
-      ]
-    },
-    {
-      "text": "Trim discovery and week-ahead captions to under 1800 characters, put the thesis first, and remove trailing ellipses.",
-      "targets": [
-        "week_ahead",
-        "discovery"
+        "global"
       ]
     }
   ]
