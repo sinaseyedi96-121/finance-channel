@@ -773,6 +773,42 @@
       "stop": null,
       "target": 416.87,
       "ticker": "TSLA"
+    },
+    {
+      "conviction": null,
+      "date": "2026-08-18",
+      "lean": "bullish",
+      "price": 220.18,
+      "stop": null,
+      "target": 232.28,
+      "ticker": "NVDA"
+    },
+    {
+      "conviction": 6,
+      "date": "2026-08-18",
+      "lean": "neutral",
+      "price": 173.3,
+      "stop": null,
+      "target": 188.83,
+      "ticker": "PLTR"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-18",
+      "lean": "bullish",
+      "price": 261.97,
+      "stop": null,
+      "target": 274.75,
+      "ticker": "AMZN"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-18",
+      "lean": "neutral",
+      "price": 481.88,
+      "stop": null,
+      "target": 490.32,
+      "ticker": "MSFT"
     }
   ],
   "earnings_dd_done": [
@@ -900,6 +936,10 @@
     "finnhub:141225824",
     "finnhub:141238463",
     "finnhub:141227390",
-    "finnhub:141239440"
+    "finnhub:141239440",
+    "finnhub:141245910",
+    "finnhub:141246266",
+    "finnhub:141245983",
+    "finnhub:141245602"
   ]
 }
