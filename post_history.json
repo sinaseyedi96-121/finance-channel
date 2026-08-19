@@ -845,6 +845,42 @@
       "stop": null,
       "target": 42.31,
       "ticker": "SMCI"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-19",
+      "lean": "neutral",
+      "price": 171.54,
+      "stop": null,
+      "target": 188.83,
+      "ticker": "PLTR"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-19",
+      "lean": "bullish",
+      "price": 219.74,
+      "stop": null,
+      "target": 232.28,
+      "ticker": "NVDA"
+    },
+    {
+      "conviction": 7,
+      "date": "2026-08-19",
+      "lean": "bullish",
+      "price": 481.63,
+      "stop": null,
+      "target": 490.32,
+      "ticker": "MSFT"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-19",
+      "lean": "neutral",
+      "price": 484.39,
+      "stop": null,
+      "target": 557.32,
+      "ticker": "AMD"
     }
   ],
   "earnings_dd_done": [
@@ -855,7 +891,7 @@
   "last_discovery": "2026-08-16",
   "last_head_to_head": "2026-08-13",
   "last_hidden_value": "2026-08-12",
-  "last_market_cap": "2026-08-18",
+  "last_market_cap": "2026-08-19",
   "last_review": "2026-08-18",
   "last_scorecard": "2026-08-15",
   "last_week_ahead": "2026-08-17",
@@ -875,8 +911,8 @@
     "WMT",
     "AMD",
     "ASML",
-    "V",
     "XOM",
+    "V",
     "JNJ",
     "MA",
     "BAC"
@@ -979,6 +1015,10 @@
     "finnhub:141245602",
     "finnhub:141247858",
     "finnhub:141247382",
-    "finnhub:141246622"
+    "finnhub:141246622",
+    "finnhub:141252714",
+    "finnhub:141252990",
+    "finnhub:141247366",
+    "finnhub:141241855"
   ]
 }
