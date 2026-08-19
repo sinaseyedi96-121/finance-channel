@@ -917,6 +917,15 @@
       "stop": null,
       "target": 274.75,
       "ticker": "AMZN"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-19",
+      "lean": "neutral",
+      "price": 36.58,
+      "stop": null,
+      "target": 36.8,
+      "ticker": "SMCI"
     }
   ],
   "earnings_dd_done": [
@@ -1058,6 +1067,7 @@
     "finnhub:141241855",
     "finnhub:141253666",
     "finnhub:141253902",
-    "finnhub:141253601"
+    "finnhub:141253601",
+    "finnhub:141254677"
   ]
 }
