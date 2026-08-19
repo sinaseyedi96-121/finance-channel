@@ -1,40 +1,43 @@
 {
-  "date": "2026-08-18",
+  "date": "2026-08-19",
   "directives": [
     {
-      "text": "Add a '\ud83c\udfaf Verdict' line to every auto post, including NVDA, AMD, and AVGO, stating direction, conviction, key level, and action.",
-      "targets": [
-        "writer"
-      ]
-    },
-    {
-      "text": "Label any one-touch level as 'reference zone' or omit it; do not call it support or resistance in NVDA, AMZN, and SMCI captions.",
-      "targets": [
-        "writer"
-      ]
-    },
-    {
-      "text": "Round all prices and targets to at most 2 decimals; change SMCI's 42.375 to 42.38.",
-      "targets": [
-        "writer"
-      ]
-    },
-    {
-      "text": "Keep discovery and week-ahead captions under 1800 characters, put the thesis first, and remove trailing ellipses.",
-      "targets": [
-        "discovery",
-        "week_ahead"
-      ]
-    },
-    {
-      "text": "Vary opening emoji and template across consecutive posts; avoid repeating the same category more than twice in a row.",
+      "text": "Enforce a chart-level gate: if a support/resistance level has fewer than 2 touches, label it 'reference zone' or omit it from the caption.",
       "targets": [
         "global"
       ]
     },
     {
-      "text": "Lead every caption with the ticker and a clear actionable conclusion, not the news source or a vague hook.",
+      "text": "Require every auto post to end with a '\ud83c\udfaf Verdict' line that separates long-term view from near-term action and cites a key level.",
       "targets": [
+        "writer"
+      ]
+    },
+    {
+      "text": "Replace certainty language in M&A and capex posts with conditional phrasing such as 'could support' or 'up to', and add execution or customer-concentration risk.",
+      "targets": [
+        "writer"
+      ]
+    },
+    {
+      "text": "Round all prices, targets, and technical levels to at most 2 decimals; omit any figure not present in the source block.",
+      "targets": [
+        "writer",
+        "analyst"
+      ]
+    },
+    {
+      "text": "Cap hidden_value and discovery captions at 1800 characters, state the thesis in the first sentence, and remove trailing ellipses.",
+      "targets": [
+        "writer",
+        "hidden_value",
+        "discovery"
+      ]
+    },
+    {
+      "text": "Vary opening emoji and template across consecutive posts; avoid using the same category more than twice in a row and limit \ud83d\ude80/\ud83d\udea8 to at most 3 per day.",
+      "targets": [
+        "writer",
         "global"
       ]
     }
