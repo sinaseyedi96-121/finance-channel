@@ -1,22 +1,25 @@
 {
-  "date": "2026-08-19",
+  "date": "2026-08-20",
   "directives": [
     {
-      "text": "Enforce a chart-level gate: if a support/resistance level has fewer than 2 touches, label it 'reference zone' or omit it from the caption.",
+      "text": "In every caption, label any support/resistance level with fewer than 2 touches as 'reference zone' and ensure the chart itself does not draw a solid line for it.",
       "targets": [
-        "global"
+        "writer",
+        "analyst"
       ]
     },
     {
-      "text": "Require every auto post to end with a '\ud83c\udfaf Verdict' line that separates long-term view from near-term action and cites a key level.",
+      "text": "End every auto post with a '\ud83c\udfaf Verdict' line that separates long-term view from near-term action and cites a key level.",
       "targets": [
-        "writer"
+        "writer",
+        "analyst"
       ]
     },
     {
-      "text": "Replace certainty language in M&A and capex posts with conditional phrasing such as 'could support' or 'up to', and add execution or customer-concentration risk.",
+      "text": "Replace certainty language in M&A and capex posts with conditional phrasing such as 'could support' or 'up to', and always add execution or customer-concentration risk.",
       "targets": [
-        "writer"
+        "writer",
+        "analyst"
       ]
     },
     {
@@ -29,7 +32,6 @@
     {
       "text": "Cap hidden_value and discovery captions at 1800 characters, state the thesis in the first sentence, and remove trailing ellipses.",
       "targets": [
-        "writer",
         "hidden_value",
         "discovery"
       ]
@@ -37,7 +39,6 @@
     {
       "text": "Vary opening emoji and template across consecutive posts; avoid using the same category more than twice in a row and limit \ud83d\ude80/\ud83d\udea8 to at most 3 per day.",
       "targets": [
-        "writer",
         "global"
       ]
     }
