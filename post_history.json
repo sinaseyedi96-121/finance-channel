@@ -998,6 +998,15 @@
       "stop": null,
       "target": 416.87,
       "ticker": "TSLA"
+    },
+    {
+      "conviction": 5,
+      "date": "2026-08-20",
+      "lean": "neutral",
+      "price": 36.5,
+      "stop": null,
+      "target": 36.8,
+      "ticker": "SMCI"
     }
   ],
   "earnings_dd_done": [
@@ -1147,6 +1156,7 @@
     "finnhub:141255599",
     "finnhub:141246755",
     "finnhub:141261424",
-    "finnhub:141261689"
+    "finnhub:141261689",
+    "finnhub:141261422"
   ]
 }
